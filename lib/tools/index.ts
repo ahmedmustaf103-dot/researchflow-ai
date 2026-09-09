@@ -9,3 +9,6 @@ export type {
   MCPTransport,
 } from "./mcp";
 export { mcpToolKey } from "./mcp";
+export { mockSearchTool } from "./search";
+export { mockFetchPageTool } from "./fetch-page";
+export { createMockToolRegistry } from "./mock-registry";
