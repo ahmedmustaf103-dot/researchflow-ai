@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
+import type { LLMProvider } from "@/lib/ai/provider";
 import { createMockToolRegistry } from "@/lib/tools/mock-registry";
 import type { ToolRegistry } from "@/lib/tools/registry";
 import { ResearchNotFoundError, ResearchStageError } from "./errors";
+import { planResearch } from "./plan";
 import { isTerminalStatus } from "./status";
 import type { ResearchStore } from "./store";
 import {
   analyseFindings,
   extractFindings,
   generateReport,
-  planResearch,
   verifyFindings,
 } from "./stages";
 import type { ResearchStage, ResearchStatus } from "./types";
@@ -17,6 +18,7 @@ import { RESEARCH_STAGES } from "./types";
 export type PipelineOptions = {
   store: ResearchStore;
   tools?: ToolRegistry;
+  llm: LLMProvider;
   failAt?: ResearchStage;
 };
 
@@ -79,7 +81,7 @@ export async function runResearchPipeline(
 
       if (stage === "plan") {
         await store.transitionStatus(projectId, "planning");
-        const planned = planResearch(project.question);
+        const planned = await planResearch(project.question, options.llm);
         for (const item of planned) {
           await store.createTask({
             projectId,

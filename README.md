@@ -8,30 +8,40 @@ ResearchFlow takes a research question, breaks it into subtasks, gathers evidenc
 
 This repository is a public portfolio project. It is being built in phases.
 
-## Current status: Phase 1
+## Current status: Phase 2A
 
-Phase 1 is a working **mocked** research workflow.
+Phase 2A replaces the mocked **Plan** stage with Gemini structured planning.
 
 You can:
 
 - Sign in with Google (when OAuth is configured)
 - Submit a research question
 - Watch a project move through the research stages
-- Inspect tasks, sources, findings, and a generated report
-- Ask follow-up storage is prepared, but follow-up Q&A is not implemented yet
+- Inspect Gemini-generated research tasks
+- Inspect sources, findings, and a generated report from the remaining mocked stages
 
-The pipeline, search, page retrieval, extraction, verification, and report are **deterministic mocks**. They exist to prove the architecture, not to produce real market research.
+This is not a fully autonomous research agent.
+
+### Phase 2A
+
+- Gemini structured planning is implemented
+- Search remains mocked
+- Retrieval remains mocked
+- Extraction remains mocked
+- Analysis remains mocked
+- Report generation remains mocked
+- RAG is not implemented
+- MCP servers are not implemented
 
 ### Not implemented yet
 
 These belong to later phases:
 
-- Real LLM calls (Gemini or otherwise)
 - Real web search
 - Real page retrieval
+- Real extraction, verification, analysis, and report generation
 - Embeddings, vector search, or RAG
 - MCP servers
-- Source verification and conflict detection
 - Production-quality citation-backed reports
 
 ## Setup
@@ -43,10 +53,13 @@ These belong to later phases:
 
 Google sign-in needs `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`. The app boots without them; sign-in stays disabled until those values are set.
 
+Gemini planning needs `GEMINI_API_KEY`. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. The app boots without an API key; the planning stage fails with a clear error instead of inventing a fake plan.
+
 ## Scripts
 
 - `npm run dev` — development server
 - `npm run typecheck` — TypeScript
 - `npm run lint` — ESLint
 - `npm test` — Vitest
+- `LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts` — optional live Gemini planning test
 - `npm run build` — production build

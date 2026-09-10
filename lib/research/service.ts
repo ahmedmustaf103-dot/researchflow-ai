@@ -1,6 +1,8 @@
+import { createGeminiProvider } from "@/lib/ai/gemini";
+import { getEnv } from "@/lib/env";
+import { createResearchInputSchema } from "./input";
 import { runResearchPipeline } from "./pipeline";
 import { getResearchStore } from "./runtime";
-import { createResearchInputSchema } from "./input";
 import { titleFromQuestion } from "./title";
 import type { ResearchProject, ResearchProjectDetail } from "./types";
 import type { ResearchStore } from "./store";
@@ -45,5 +47,13 @@ export async function runQueuedResearchPipeline(
   projectId: string,
   store: ResearchStore = getResearchStore(),
 ) {
-  return runResearchPipeline(projectId, { store });
+  const env = getEnv();
+
+  return runResearchPipeline(projectId, {
+    store,
+    llm: createGeminiProvider({
+      apiKey: env.GEMINI_API_KEY,
+      model: env.GEMINI_MODEL,
+    }),
+  });
 }

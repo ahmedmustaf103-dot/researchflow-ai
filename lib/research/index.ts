@@ -20,6 +20,7 @@ export {
 } from "./status";
 export { titleFromQuestion } from "./title";
 export { runResearchPipeline } from "./pipeline";
+export { planResearch, researchPlanSchema, MAX_RESEARCH_TASKS } from "./plan";
 export {
   createQueuedProject,
   getResearchProjectForUser,

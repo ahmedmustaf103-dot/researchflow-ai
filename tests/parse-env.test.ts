@@ -19,6 +19,20 @@ describe("parseEnv", () => {
     expect(env.DATABASE_URL).toContain("postgresql://");
     expect(env.AUTH_SECRET.length).toBeGreaterThan(0);
     expect(env.AUTH_GOOGLE_ID).toBeUndefined();
+    expect(env.GEMINI_API_KEY).toBeUndefined();
+    expect(env.GEMINI_MODEL).toBe("gemini-2.5-flash");
+  });
+
+  it("accepts a configured Gemini model and treats an empty key as unset", () => {
+    const env = parseEnv(
+      validEnv({
+        GEMINI_API_KEY: "",
+        GEMINI_MODEL: "gemini-2.5-flash",
+      }),
+    );
+
+    expect(env.GEMINI_API_KEY).toBeUndefined();
+    expect(env.GEMINI_MODEL).toBe("gemini-2.5-flash");
   });
 
   it("treats empty Google OAuth values as unset", () => {

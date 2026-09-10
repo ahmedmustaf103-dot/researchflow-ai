@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createMockLLMProvider } from "@/lib/ai/mock";
 import { createMemoryResearchStore } from "@/lib/research/memory-store";
 import { runResearchPipeline } from "@/lib/research/pipeline";
 import { createQueuedProject } from "@/lib/research/service";
@@ -6,7 +7,7 @@ import { RESEARCH_STAGES } from "@/lib/research/types";
 import { mockSearchTool } from "@/lib/tools/search";
 import { mockFetchPageTool } from "@/lib/tools/fetch-page";
 
-describe("mock research pipeline", () => {
+describe("research pipeline", () => {
   it("completes every stage in order and lands on completed", async () => {
     const store = createMemoryResearchStore();
     const project = await createQueuedProject(
@@ -15,7 +16,10 @@ describe("mock research pipeline", () => {
       store,
     );
 
-    const result = await runResearchPipeline(project.id, { store });
+    const result = await runResearchPipeline(project.id, {
+      store,
+      llm: createMockLLMProvider(),
+    });
     const detail = await store.getProjectDetail(project.id, "user-1");
 
     expect(result.executedStages).toEqual([...RESEARCH_STAGES]);
@@ -42,7 +46,10 @@ describe("mock research pipeline", () => {
       return originalTransition(id, to, errorMessage);
     };
 
-    await runResearchPipeline(project.id, { store });
+    await runResearchPipeline(project.id, {
+      store,
+      llm: createMockLLMProvider(),
+    });
 
     expect(seen).toEqual([
       "queued",
@@ -65,6 +72,7 @@ describe("mock research pipeline", () => {
 
     const result = await runResearchPipeline(project.id, {
       store,
+      llm: createMockLLMProvider(),
       failAt: "search",
     });
     const failed = await store.getProject(project.id);
@@ -83,8 +91,14 @@ describe("mock research pipeline", () => {
       store,
     );
 
-    await runResearchPipeline(project.id, { store });
-    const second = await runResearchPipeline(project.id, { store });
+    await runResearchPipeline(project.id, {
+      store,
+      llm: createMockLLMProvider(),
+    });
+    const second = await runResearchPipeline(project.id, {
+      store,
+      llm: createMockLLMProvider(),
+    });
     const detail = await store.getProjectDetail(project.id, "user-1");
 
     expect(second.status).toBe("completed");
@@ -110,5 +124,39 @@ describe("mock research pipeline", () => {
     if (page.ok) {
       expect(page.data.content).toContain("Adyen");
     }
+  });
+
+  it("uses the injected planner and keeps later stages mocked", async () => {
+    const store = createMemoryResearchStore();
+    const project = await createQueuedProject(
+      "user-1",
+      "Research the top competitors of Stripe",
+      store,
+    );
+
+    const result = await runResearchPipeline(project.id, {
+      store,
+      llm: createMockLLMProvider({
+        plan: {
+          goal: "Compare Stripe competitors",
+          dimensions: ["pricing", "features"],
+          tasks: [
+            {
+              title: "Custom competitor scan",
+              query: "Stripe top competitors",
+              sortOrder: 7,
+            },
+          ],
+        },
+      }),
+    });
+    const detail = await store.getProjectDetail(project.id, "user-1");
+
+    expect(result.status).toBe("completed");
+    expect(detail?.tasks).toHaveLength(1);
+    expect(detail?.tasks[0]?.title).toBe("Custom competitor scan");
+    expect(detail?.tasks[0]?.sortOrder).toBe(1);
+    expect(detail?.sources.length).toBeGreaterThan(0);
+    expect(detail?.report?.markdown).toContain("remain mocked");
   });
 });
