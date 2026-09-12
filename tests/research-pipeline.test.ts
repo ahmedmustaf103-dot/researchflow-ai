@@ -158,6 +158,6 @@ describe("research pipeline", () => {
     expect(detail?.tasks[0]?.sortOrder).toBe(1);
     expect(detail?.sources.length).toBeGreaterThan(0);
     expect(detail?.report?.markdown).toContain("remain mocked");
-    expect(detail?.report?.markdown).toContain("Phase 2B");
+    expect(detail?.report?.markdown).toContain("Phase 2C");
   });
 });

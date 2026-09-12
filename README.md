@@ -17,7 +17,7 @@ Question
 
 This is a public portfolio project, built in phases. It is not a fully autonomous research agent.
 
-**Current checkpoint: Phase 2B.** Gemini plans the research. Tavily searches the web and Jina retrieves pages. Extract, verify, analyse, and report remain mocked.
+**Current checkpoint: Phase 2C.** Gemini plans the research and extracts quote-backed evidence. Tavily searches the web and Jina retrieves pages. Verify, analyse, and report remain mocked.
 
 ## Why I built it
 
@@ -43,13 +43,13 @@ The architecture emphasises:
 - [x] Gemini structured research planning
 - [x] Real web search — Phase 2B
 - [x] Real page retrieval — Phase 2B
-- [ ] Evidence extraction — Phase 2C
+- [x] Evidence extraction — Phase 2C
 - [ ] AI analysis — Phase 2D
 - [ ] Citation-backed reports — Phase 2D
 - [ ] MCP — Phase 3
 - [ ] RAG / embeddings — later
 
-You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, and review persisted Tavily sources and Jina page content. Extraction and later stages remain mocked.
+You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, review Tavily sources and Jina page content, and inspect quote-verified findings. Verification and later stages remain mocked.
 
 ## Architecture
 
@@ -65,7 +65,7 @@ flowchart TD
     H --> I[Report]
 ```
 
-**Planning** uses Gemini. **Search** uses Tavily. **Retrieve** uses Jina Reader. **Extract**, **Verify**, **Analyse**, and **Report** remain mocked.
+**Planning** uses Gemini. **Search** uses Tavily. **Retrieve** uses Jina Reader. **Extract** uses Gemini structured evidence with quote verification. **Verify**, **Analyse**, and **Report** remain mocked.
 
 ```text
 app/            UI and thin HTTP routes
@@ -83,7 +83,7 @@ The Prisma schema already models `ResearchProject`, `ResearchTask`, `Source`, `F
 ## AI architecture
 
 - Gemini is behind the `LLMProvider` interface. Research stages do not import `@ai-sdk/google`.
-- Structured planning uses `generateObject` plus a Zod schema: goal, dimensions, and up to six tasks with title, query, and sort order.
+- Structured planning and evidence extraction use `generateObject` plus Zod schemas. Findings are quote-checked against the retrieved source before they are persisted. The application attaches `sourceId`; the model never chooses it.
 - Application code enforces limits after the model returns. Empty goals, titles, and queries are rejected. Extra tasks are clamped and `sortOrder` is normalised.
 - The pipeline is deterministic. It does not run a free-roaming agent loop.
 - Search and retrieval are represented as tools. Production uses Tavily and Jina; tests inject mock tools.
@@ -114,7 +114,7 @@ From the current repository:
 
 Vitest covers unit, pipeline, store, and API tests. Default `npm test` uses the mocked LLM provider and excludes live Gemini calls.
 
-Default `npm test` uses mocked LLM, Tavily, and Jina providers. Current default suite: **14 files, 73 tests**.
+Default `npm test` uses mocked LLM, Tavily, and Jina providers. Current default suite: **15 files, 92 tests**.
 
 Also validated locally:
 
@@ -130,7 +130,6 @@ LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts
 
 ## Roadmap
 
-- **Phase 2C** — Gemini evidence extraction
 - **Phase 2D** — analysis and citation-backed reports
 - **Phase 3** — MCP servers
 - **Later** — RAG, embeddings, and advanced evaluations

@@ -6,9 +6,9 @@ import { retrieveResearchSources, searchResearchTasks } from "./gather";
 import { planResearch } from "./plan";
 import { isTerminalStatus } from "./status";
 import type { ResearchStore } from "./store";
+import { extractEvidenceFromSources } from "./extract";
 import {
   analyseFindings,
-  extractFindings,
   generateReport,
   verifyFindings,
 } from "./stages";
@@ -106,15 +106,18 @@ export async function runResearchPipeline(
       }
 
       if (stage === "extract") {
-        const sources = await store.listSources(projectId);
-        for (const source of sources) {
-          for (const finding of extractFindings(source)) {
-            await store.createFinding({
-              projectId,
-              sourceId: source.id,
-              ...finding,
-            });
-          }
+        const [sources, tasks] = await Promise.all([
+          store.listSources(projectId),
+          store.listTasks(projectId),
+        ]);
+        const extracted = await extractEvidenceFromSources({
+          question: project.question,
+          sources,
+          tasks,
+          llm: options.llm,
+        });
+        for (const finding of extracted) {
+          await store.createFinding(finding);
         }
         executedStages.push(stage);
         continue;

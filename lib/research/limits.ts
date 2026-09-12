@@ -8,3 +8,7 @@ export const MAX_SEARCH_RETRIES = 2;
 export const MAX_FETCH_RETRIES = 1;
 export const SEARCH_TIMEOUT_MS = 20_000;
 export const FETCH_TIMEOUT_MS = 30_000;
+export const MAX_FINDINGS_PER_SOURCE = 8;
+export const MAX_CLAIM_LENGTH = 500;
+export const MAX_QUOTE_LENGTH = 800;
+export const MAX_RELEVANCE_LENGTH = 400;

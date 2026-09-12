@@ -22,7 +22,14 @@ export { titleFromQuestion } from "./title";
 export { runResearchPipeline } from "./pipeline";
 export { planResearch, researchPlanSchema, MAX_RESEARCH_TASKS } from "./plan";
 export {
+  extractedFindingSchema,
+  extractedFindingsSchema,
+  extractEvidenceFromSource,
+  quoteExistsInSource,
+} from "./extract";
+export {
   MAX_FETCH_CONCURRENCY,
+  MAX_FINDINGS_PER_SOURCE,
   MAX_PAGE_CHARACTERS,
   MAX_PAGES_PER_PROJECT,
   MAX_SEARCH_RESULTS_PER_QUERY,

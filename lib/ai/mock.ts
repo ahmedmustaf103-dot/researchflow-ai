@@ -1,4 +1,8 @@
 import type { ZodType } from "zod";
+import {
+  SOURCE_CONTENT_END,
+  SOURCE_CONTENT_START,
+} from "./prompts/extract";
 import type {
   EmbedInput,
   EmbedResult,
@@ -11,6 +15,7 @@ import type {
   LLMProvider,
   ProviderToolDefinition,
 } from "./provider";
+
 export type MockResearchPlan = {
   goal: string;
   dimensions: string[];
@@ -19,6 +24,12 @@ export type MockResearchPlan = {
     query: string;
     sortOrder: number;
   }>;
+};
+
+export type MockExtractedFinding = {
+  claim: string;
+  quote: string;
+  relevance: string;
 };
 
 export const defaultMockResearchPlan: MockResearchPlan = {
@@ -45,14 +56,53 @@ export const defaultMockResearchPlan: MockResearchPlan = {
 
 export type MockLLMProviderOptions = {
   plan?: MockResearchPlan;
+  extraction?:
+    | { findings: MockExtractedFinding[] }
+    | ((input: GenerateObjectInput) => { findings: MockExtractedFinding[] });
+  failExtraction?: boolean | ((input: GenerateObjectInput) => boolean);
 };
+
+export function defaultExtractionFromPrompt(
+  prompt: string,
+): { findings: MockExtractedFinding[] } {
+  const start = prompt.indexOf(SOURCE_CONTENT_START);
+  const end = prompt.indexOf(SOURCE_CONTENT_END);
+  const content =
+    start >= 0 && end > start
+      ? prompt.slice(start + SOURCE_CONTENT_START.length, end).trim()
+      : "";
+
+  if (!content) {
+    return { findings: [] };
+  }
+
+  const quote = content.replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!quote) {
+    return { findings: [] };
+  }
+
+  return {
+    findings: [
+      {
+        claim:
+          "The retrieved source contains evidence related to the research question.",
+        quote,
+        relevance: "The quoted passage appears in the retrieved source.",
+      },
+    ],
+  };
+}
 
 export class MockLLMProvider implements LLMProvider {
   readonly id = "mock";
   private readonly plan: MockResearchPlan;
+  private readonly extraction?: MockLLMProviderOptions["extraction"];
+  private readonly failExtraction?: MockLLMProviderOptions["failExtraction"];
 
   constructor(options: MockLLMProviderOptions = {}) {
     this.plan = options.plan ?? defaultMockResearchPlan;
+    this.extraction = options.extraction;
+    this.failExtraction = options.failExtraction;
   }
 
   async generateText(input: GenerateTextInput): Promise<GenerateTextResult> {
@@ -60,10 +110,27 @@ export class MockLLMProvider implements LLMProvider {
   }
 
   async generateObject<T>(
-    _input: GenerateObjectInput,
+    input: GenerateObjectInput,
     schema: ZodType<T>,
   ): Promise<GenerateObjectResult<T>> {
-    return { object: schema.parse(this.plan) };
+    const asPlan = schema.safeParse(this.plan);
+    if (asPlan.success) {
+      return { object: asPlan.data };
+    }
+
+    if (
+      this.failExtraction === true ||
+      (typeof this.failExtraction === "function" && this.failExtraction(input))
+    ) {
+      throw new Error("Gemini extraction failed");
+    }
+
+    const extraction =
+      typeof this.extraction === "function"
+        ? this.extraction(input)
+        : (this.extraction ?? defaultExtractionFromPrompt(input.prompt));
+
+    return { object: schema.parse(extraction) };
   }
 
   async generateWithTools(
