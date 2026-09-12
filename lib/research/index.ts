@@ -22,6 +22,12 @@ export { titleFromQuestion } from "./title";
 export { runResearchPipeline } from "./pipeline";
 export { planResearch, researchPlanSchema, MAX_RESEARCH_TASKS } from "./plan";
 export {
+  MAX_FETCH_CONCURRENCY,
+  MAX_PAGE_CHARACTERS,
+  MAX_PAGES_PER_PROJECT,
+  MAX_SEARCH_RESULTS_PER_QUERY,
+} from "./limits";
+export {
   createQueuedProject,
   getResearchProjectForUser,
   listResearchProjects,

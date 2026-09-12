@@ -1,0 +1,10 @@
+export const MAX_RESEARCH_TASKS = 6;
+export const SEARCH_QUERIES_PER_TASK = 1;
+export const MAX_SEARCH_RESULTS_PER_QUERY = 5;
+export const MAX_PAGES_PER_PROJECT = 12;
+export const MAX_PAGE_CHARACTERS = 12_000;
+export const MAX_FETCH_CONCURRENCY = 3;
+export const MAX_SEARCH_RETRIES = 2;
+export const MAX_FETCH_RETRIES = 1;
+export const SEARCH_TIMEOUT_MS = 20_000;
+export const FETCH_TIMEOUT_MS = 30_000;

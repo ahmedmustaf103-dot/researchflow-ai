@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
 import type { LLMProvider } from "@/lib/ai/provider";
 import { createMockToolRegistry } from "@/lib/tools/mock-registry";
 import type { ToolRegistry } from "@/lib/tools/registry";
 import { ResearchNotFoundError, ResearchStageError } from "./errors";
+import { retrieveResearchSources, searchResearchTasks } from "./gather";
 import { planResearch } from "./plan";
 import { isTerminalStatus } from "./status";
 import type { ResearchStore } from "./store";
@@ -28,10 +28,6 @@ export type PipelineResult = {
   executedStages: ResearchStage[];
   errorMessage?: string;
 };
-
-function hashContent(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown pipeline error";
@@ -97,75 +93,14 @@ export async function runResearchPipeline(
       if (stage === "search") {
         await store.transitionStatus(projectId, "researching");
         const searchTool = await requireTool(tools, "search", "search");
-        const tasks = await store.listTasks(projectId);
-
-        for (const task of tasks) {
-          await store.updateTask(task.id, { status: "running" });
-          const input = searchTool.inputSchema.parse({ query: task.query });
-          const result = await searchTool.execute(input, { projectId });
-
-          if (!result.ok) {
-            await store.updateTask(task.id, { status: "failed" });
-            throw new ResearchStageError(
-              "search",
-              `Search failed for task "${task.title}": ${result.error}`,
-            );
-          }
-
-          const hits = (result.data as { results?: Array<{ url: string; title: string; snippet: string }> }).results ?? [];
-          for (const hit of hits) {
-            await store.createSource({
-              projectId,
-              taskId: task.id,
-              url: hit.url,
-              title: hit.title,
-              snippet: hit.snippet,
-              toolName: "search",
-            });
-          }
-
-          await store.updateTask(task.id, {
-            status: "completed",
-            resultJson: { resultCount: hits.length },
-          });
-        }
-
+        await searchResearchTasks(projectId, store, searchTool);
         executedStages.push(stage);
         continue;
       }
 
       if (stage === "retrieve") {
         const fetchTool = await requireTool(tools, "fetch_page", "retrieve");
-        const sources = await store.listSources(projectId);
-
-        for (const source of sources) {
-          const input = fetchTool.inputSchema.parse({ url: source.url });
-          const result = await fetchTool.execute(input, { projectId });
-
-          if (!result.ok) {
-            throw new ResearchStageError(
-              "retrieve",
-              `Fetch failed for ${source.url}: ${result.error}`,
-            );
-          }
-
-          const page = result.data as {
-            title?: string;
-            content?: string;
-            httpStatus?: number;
-          };
-
-          const content = page.content ?? "";
-          await store.updateSource(source.id, {
-            title: page.title ?? source.title,
-            content,
-            contentHash: hashContent(content),
-            httpStatus: page.httpStatus ?? 200,
-            toolName: "fetch_page",
-            fetchedAt: new Date(),
-          });
-        }
-
+        await retrieveResearchSources(projectId, store, fetchTool);
         executedStages.push(stage);
         continue;
       }

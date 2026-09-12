@@ -7,7 +7,7 @@ export interface ToolContext {
 
 export type ToolResult<T = unknown> =
   | { ok: true; data: T }
-  | { ok: false; error: string; retryable: boolean };
+  | { ok: false; error: string; retryable: boolean; statusCode?: number };
 
 /**
  * First-party tools owned by ResearchFlow (search, fetch, etc.).

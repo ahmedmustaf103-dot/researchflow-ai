@@ -15,7 +15,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
           Ask a business or market research question. Planning uses Gemini;
-          later stages are still mocked.
+          search and retrieval use Tavily and Jina. Later stages remain mocked.
         </p>
       </div>
 

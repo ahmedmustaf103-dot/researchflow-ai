@@ -12,3 +12,6 @@ export { mcpToolKey } from "./mcp";
 export { mockSearchTool } from "./search";
 export { mockFetchPageTool } from "./fetch-page";
 export { createMockToolRegistry } from "./mock-registry";
+export { createProductionToolRegistry } from "./production-registry";
+export { createTavilySearchTool } from "./search/tavily";
+export { createJinaFetchPageTool } from "./fetch-page/jina";

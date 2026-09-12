@@ -1,5 +1,6 @@
 import { createGeminiProvider } from "@/lib/ai/gemini";
 import { getEnv } from "@/lib/env";
+import { createProductionToolRegistry } from "@/lib/tools/production-registry";
 import { createResearchInputSchema } from "./input";
 import { runResearchPipeline } from "./pipeline";
 import { getResearchStore } from "./runtime";
@@ -51,6 +52,7 @@ export async function runQueuedResearchPipeline(
 
   return runResearchPipeline(projectId, {
     store,
+    tools: createProductionToolRegistry(),
     llm: createGeminiProvider({
       apiKey: env.GEMINI_API_KEY,
       model: env.GEMINI_MODEL,

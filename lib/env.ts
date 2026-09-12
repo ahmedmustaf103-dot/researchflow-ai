@@ -12,6 +12,8 @@ const envSchema = z.object({
   AUTH_GOOGLE_ID: optionalNonEmptyString,
   AUTH_GOOGLE_SECRET: optionalNonEmptyString,
   GEMINI_API_KEY: optionalNonEmptyString,
+  TAVILY_API_KEY: optionalNonEmptyString,
+  JINA_API_KEY: optionalNonEmptyString,
   GEMINI_MODEL: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).default("gemini-2.5-flash"),

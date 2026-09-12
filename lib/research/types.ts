@@ -62,6 +62,8 @@ export type SearchHit = {
   url: string;
   title: string;
   snippet: string;
+  publishedAt?: string;
+  score?: number;
 };
 
 export type FetchedPage = {

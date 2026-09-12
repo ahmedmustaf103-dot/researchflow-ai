@@ -2,9 +2,10 @@ import { z } from "zod";
 import type { LLMProvider } from "@/lib/ai/provider";
 import { buildPlanUserPrompt, PLAN_SYSTEM_PROMPT } from "@/lib/ai/prompts/plan";
 import { ResearchPlanError } from "./errors";
+import { MAX_RESEARCH_TASKS } from "./limits";
 import type { PlannedTask } from "./types";
 
-export const MAX_RESEARCH_TASKS = 6;
+export { MAX_RESEARCH_TASKS } from "./limits";
 
 export const researchPlanSchema = z.object({
   goal: z.string().trim().min(1, "goal must not be empty"),
