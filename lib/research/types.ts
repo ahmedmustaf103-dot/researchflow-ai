@@ -95,12 +95,24 @@ export type VerificationNote = {
 
 export type AnalysisResult = {
   summary: string;
-  conflicts: string[];
+  comparisons: Array<{
+    dimension: string;
+    points: string[];
+  }>;
+  similarities: string[];
+  differences: string[];
+  gaps: string[];
+  uncertainties: string[];
+  conflicts: Array<{
+    topic: string;
+    statements: string[];
+  }>;
 };
 
 export type GeneratedReport = {
   markdown: string;
   outline: {
     sections: string[];
+    report?: unknown;
   };
 };

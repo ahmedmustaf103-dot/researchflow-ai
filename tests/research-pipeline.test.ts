@@ -157,7 +157,7 @@ describe("research pipeline", () => {
     expect(detail?.tasks[0]?.title).toBe("Custom competitor scan");
     expect(detail?.tasks[0]?.sortOrder).toBe(1);
     expect(detail?.sources.length).toBeGreaterThan(0);
-    expect(detail?.report?.markdown).toContain("remain mocked");
-    expect(detail?.report?.markdown).toContain("Phase 2C");
+    expect(detail?.report?.markdown).toContain("Research report");
+    expect(detail?.report?.markdown).toContain("https://example.com");
   });
 });

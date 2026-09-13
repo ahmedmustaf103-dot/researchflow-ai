@@ -114,7 +114,7 @@ describe("research gather pipeline", () => {
     expect(detail?.sources).toHaveLength(2);
     expect(detail?.sources.every((source) => source.content?.startsWith("Content"))).toBe(true);
     expect(detail?.findings.length).toBeGreaterThan(0);
-    expect(detail?.report?.markdown).toContain("remain mocked");
+    expect(detail?.report?.markdown).toContain("Research report");
   });
 
   it("reuses a source when the same URL appears in multiple tasks", async () => {

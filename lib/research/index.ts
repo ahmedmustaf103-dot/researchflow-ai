@@ -27,6 +27,13 @@ export {
   extractEvidenceFromSource,
   quoteExistsInSource,
 } from "./extract";
+export { analyseResearch, researchAnalysisSchema } from "./analyse";
+export {
+  generateCitationBackedReport,
+  researchReportSchema,
+  sanitizeReportCitations,
+} from "./report";
+export { sanitizeSourceIds } from "./citations";
 export {
   MAX_FETCH_CONCURRENCY,
   MAX_FINDINGS_PER_SOURCE,

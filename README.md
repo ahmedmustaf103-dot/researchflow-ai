@@ -17,7 +17,7 @@ Question
 
 This is a public portfolio project, built in phases. It is not a fully autonomous research agent.
 
-**Current checkpoint: Phase 2C.** Gemini plans the research and extracts quote-backed evidence. Tavily searches the web and Jina retrieves pages. Verify, analyse, and report remain mocked.
+**Current checkpoint: Phase 2D.** Gemini plans the research, extracts quote-backed evidence, analyses the findings, and writes a citation-backed report. Tavily searches the web and Jina retrieves pages. Report citations are validated against project sources.
 
 ## Why I built it
 
@@ -44,12 +44,12 @@ The architecture emphasises:
 - [x] Real web search — Phase 2B
 - [x] Real page retrieval — Phase 2B
 - [x] Evidence extraction — Phase 2C
-- [ ] AI analysis — Phase 2D
-- [ ] Citation-backed reports — Phase 2D
+- [x] AI analysis — Phase 2D
+- [x] Citation-backed reports — Phase 2D
 - [ ] MCP — Phase 3
 - [ ] RAG / embeddings — later
 
-You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, review Tavily sources and Jina page content, and inspect quote-verified findings. Verification and later stages remain mocked.
+You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, review Tavily sources and Jina page content, inspect quote-verified findings, and read a citation-backed report whose URLs come from the database.
 
 ## Architecture
 
@@ -65,7 +65,7 @@ flowchart TD
     H --> I[Report]
 ```
 
-**Planning** uses Gemini. **Search** uses Tavily. **Retrieve** uses Jina Reader. **Extract** uses Gemini structured evidence with quote verification. **Verify**, **Analyse**, and **Report** remain mocked.
+**Planning**, **Extract**, **Analyse**, and **Report** use Gemini. **Search** uses Tavily. **Retrieve** uses Jina Reader. Report citations are checked against the project's stored sources; URLs are never taken from the model.
 
 ```text
 app/            UI and thin HTTP routes
@@ -83,7 +83,7 @@ The Prisma schema already models `ResearchProject`, `ResearchTask`, `Source`, `F
 ## AI architecture
 
 - Gemini is behind the `LLMProvider` interface. Research stages do not import `@ai-sdk/google`.
-- Structured planning and evidence extraction use `generateObject` plus Zod schemas. Findings are quote-checked against the retrieved source before they are persisted. The application attaches `sourceId`; the model never chooses it.
+- Structured planning, extraction, analysis, and reports use `generateObject` plus Zod schemas. Findings are quote-checked against the retrieved source. Report citations are validated against the project's stored source IDs. The application attaches source IDs and trusted URLs; the model never creates sources.
 - Application code enforces limits after the model returns. Empty goals, titles, and queries are rejected. Extra tasks are clamped and `sortOrder` is normalised.
 - The pipeline is deterministic. It does not run a free-roaming agent loop.
 - Search and retrieval are represented as tools. Production uses Tavily and Jina; tests inject mock tools.
@@ -114,7 +114,7 @@ From the current repository:
 
 Vitest covers unit, pipeline, store, and API tests. Default `npm test` uses the mocked LLM provider and excludes live Gemini calls.
 
-Default `npm test` uses mocked LLM, Tavily, and Jina providers. Current default suite: **15 files, 92 tests**.
+Default `npm test` uses mocked LLM, Tavily, and Jina providers. Current default suite: **18 files, 109 tests**.
 
 Also validated locally:
 
@@ -130,7 +130,6 @@ LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts
 
 ## Roadmap
 
-- **Phase 2D** — analysis and citation-backed reports
 - **Phase 3** — MCP servers
 - **Later** — RAG, embeddings, and advanced evaluations
 

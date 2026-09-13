@@ -6,12 +6,10 @@ import { retrieveResearchSources, searchResearchTasks } from "./gather";
 import { planResearch } from "./plan";
 import { isTerminalStatus } from "./status";
 import type { ResearchStore } from "./store";
+import { analyseResearch, type ResearchAnalysis } from "./analyse";
 import { extractEvidenceFromSources } from "./extract";
-import {
-  analyseFindings,
-  generateReport,
-  verifyFindings,
-} from "./stages";
+import { generateCitationBackedReport } from "./report";
+import { verifyFindings } from "./stages";
 import type { ResearchStage, ResearchStatus } from "./types";
 import { RESEARCH_STAGES } from "./types";
 
@@ -55,6 +53,7 @@ export async function runResearchPipeline(
   const store = options.store;
   const tools = options.tools ?? createMockToolRegistry();
   const executedStages: ResearchStage[] = [];
+  let analysis: ResearchAnalysis | undefined;
 
   const project = await store.getProject(projectId);
   if (!project) {
@@ -133,9 +132,17 @@ export async function runResearchPipeline(
 
       if (stage === "analyse") {
         await store.transitionStatus(projectId, "analysing");
-        const findings = await store.listFindings(projectId);
-        const analysis = analyseFindings(project.question, findings);
-        const tasks = await store.listTasks(projectId);
+        const [findings, sources, tasks] = await Promise.all([
+          store.listFindings(projectId),
+          store.listSources(projectId),
+          store.listTasks(projectId),
+        ]);
+        analysis = await analyseResearch({
+          question: project.question,
+          findings,
+          sources,
+          llm: options.llm,
+        });
         const lastTask = tasks.at(-1);
         if (lastTask) {
           await store.updateTask(lastTask.id, {
@@ -148,21 +155,28 @@ export async function runResearchPipeline(
 
       if (stage === "report") {
         await store.transitionStatus(projectId, "reporting");
+        if (!analysis) {
+          throw new ResearchStageError(
+            "report",
+            "Analysis is required before report generation",
+          );
+        }
+
         const [findings, sources] = await Promise.all([
           store.listFindings(projectId),
           store.listSources(projectId),
         ]);
-        const analysis = analyseFindings(project.question, findings);
-        const generated = generateReport({
+        const generated = await generateCitationBackedReport({
           question: project.question,
           analysis,
           findings,
           sources,
+          llm: options.llm,
         });
         await store.createReport({
           projectId,
           markdown: generated.markdown,
-          outlineJson: generated.outline,
+          outlineJson: JSON.parse(JSON.stringify(generated.outline)),
         });
         await store.transitionStatus(projectId, "completed");
         executedStages.push(stage);

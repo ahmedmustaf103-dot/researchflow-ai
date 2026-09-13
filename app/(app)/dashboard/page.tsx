@@ -14,9 +14,9 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Ask a business or market research question. Planning and evidence
-          extraction use Gemini. Search and retrieval use Tavily and Jina.
-          Later stages remain mocked.
+          Ask a business or market research question. Planning, extraction,
+          analysis, and reports use Gemini. Search and retrieval use Tavily
+          and Jina.
         </p>
       </div>
 
