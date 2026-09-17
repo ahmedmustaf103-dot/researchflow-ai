@@ -197,7 +197,7 @@ describe("research gather pipeline", () => {
     const { result, detail } = await runWithTools(
       searchTool(async (query) => {
         if (query.includes("fail")) {
-          return { ok: false, error: "Tavily unavailable", retryable: true };
+          return { ok: false, error: "Search unavailable", retryable: true };
         }
 
         return {
@@ -223,7 +223,7 @@ describe("research gather pipeline", () => {
     const { result, detail } = await runWithTools(
       searchTool(async () => ({
         ok: false,
-        error: "Tavily unavailable",
+        error: "Search unavailable",
         retryable: true,
       })),
       fetchTool(async (url) => ({ ok: true, data: page(url) })),
@@ -234,7 +234,7 @@ describe("research gather pipeline", () => {
     );
 
     expect(result.status).toBe("failed");
-    expect(result.errorMessage).toMatch(/All Tavily searches failed/);
+    expect(result.errorMessage).toMatch(/All searches failed/);
     expect(detail?.sources).toHaveLength(0);
     expect(detail?.report).toBeNull();
   });

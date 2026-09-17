@@ -21,7 +21,7 @@ describe("parseEnv", () => {
     expect(env.AUTH_GOOGLE_ID).toBeUndefined();
     expect(env.GEMINI_API_KEY).toBeUndefined();
     expect(env.GEMINI_MODEL).toBe("gemini-2.5-flash");
-    expect(env.TAVILY_API_KEY).toBeUndefined();
+    expect(env.BRAVE_API_KEY).toBeUndefined();
     expect(env.JINA_API_KEY).toBeUndefined();
   });
 

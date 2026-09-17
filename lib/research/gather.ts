@@ -99,7 +99,7 @@ export async function searchResearchTasks(
   if (tasks.length > 0 && successfulSearches === 0 && failedSearches > 0) {
     throw new ResearchStageError(
       "search",
-      "All Tavily searches failed. No sources were gathered.",
+      "All searches failed. No sources were gathered.",
     );
   }
 }

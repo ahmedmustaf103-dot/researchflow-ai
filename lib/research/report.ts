@@ -18,56 +18,93 @@ import {
 } from "./limits";
 import type { Finding, GeneratedReport, Source } from "./types";
 
-const sourceIdList = z.array(z.string().trim().min(1)).max(MAX_REPORT_LIST_ITEMS);
-const textList = z
-  .array(z.string().trim().min(1).max(MAX_REPORT_TEXT_LENGTH))
-  .max(MAX_REPORT_LIST_ITEMS);
+const text = z.string().trim().min(1);
+const sourceIdList = z.array(z.string().trim().min(1));
+const textList = z.array(text);
 
 export const researchReportSchema = z.object({
-  title: z.string().trim().min(1).max(200),
-  executiveSummary: z.string().trim().min(1).max(MAX_REPORT_TEXT_LENGTH),
-  scope: z.string().trim().min(1).max(MAX_REPORT_TEXT_LENGTH),
-  keyFindings: z
-    .array(
-      z.object({
-        text: z.string().trim().min(1).max(MAX_REPORT_TEXT_LENGTH),
-        sourceIds: sourceIdList,
-      }),
-    )
-    .max(MAX_REPORT_LIST_ITEMS),
-  comparisons: z
-    .array(
-      z.object({
-        dimension: z.string().trim().min(1).max(200),
-        points: textList,
-        sourceIds: sourceIdList,
-      }),
-    )
-    .max(MAX_REPORT_LIST_ITEMS),
-  strengthsWeaknesses: z
-    .array(
-      z.object({
-        subject: z.string().trim().min(1).max(200),
-        strengths: textList,
-        weaknesses: textList,
-        sourceIds: sourceIdList,
-      }),
-    )
-    .max(MAX_REPORT_LIST_ITEMS),
+  title: text,
+  executiveSummary: text,
+  scope: text,
+  keyFindings: z.array(
+    z.object({
+      text,
+      sourceIds: sourceIdList,
+    }),
+  ),
+  comparisons: z.array(
+    z.object({
+      dimension: text,
+      points: textList,
+      sourceIds: sourceIdList,
+    }),
+  ),
+  strengthsWeaknesses: z.array(
+    z.object({
+      subject: text,
+      strengths: textList,
+      weaknesses: textList,
+      sourceIds: sourceIdList,
+    }),
+  ),
   gaps: textList,
   uncertainties: textList,
-  conflicts: z
-    .array(
-      z.object({
-        topic: z.string().trim().min(1).max(200),
-        statements: textList,
-        sourceIds: sourceIdList,
-      }),
-    )
-    .max(MAX_REPORT_LIST_ITEMS),
+  conflicts: z.array(
+    z.object({
+      topic: text,
+      statements: textList,
+      sourceIds: sourceIdList,
+    }),
+  ),
 });
 
 export type ResearchReport = z.infer<typeof researchReportSchema>;
+
+function clampText(value: string, max = MAX_REPORT_TEXT_LENGTH): string {
+  return value.slice(0, max);
+}
+
+function clampTextList(values: string[]): string[] {
+  return values.slice(0, MAX_REPORT_LIST_ITEMS).map((item) => clampText(item));
+}
+
+function clampSourceIds(values: string[]): string[] {
+  return values.slice(0, MAX_REPORT_LIST_ITEMS);
+}
+
+export function clampResearchReport(report: ResearchReport): ResearchReport {
+  return {
+    title: clampText(report.title, 200),
+    executiveSummary: clampText(report.executiveSummary),
+    scope: clampText(report.scope),
+    keyFindings: report.keyFindings.slice(0, MAX_REPORT_LIST_ITEMS).map((item) => ({
+      text: clampText(item.text),
+      sourceIds: clampSourceIds(item.sourceIds),
+    })),
+    comparisons: report.comparisons
+      .slice(0, MAX_REPORT_LIST_ITEMS)
+      .map((item) => ({
+        dimension: clampText(item.dimension, 200),
+        points: clampTextList(item.points),
+        sourceIds: clampSourceIds(item.sourceIds),
+      })),
+    strengthsWeaknesses: report.strengthsWeaknesses
+      .slice(0, MAX_REPORT_LIST_ITEMS)
+      .map((item) => ({
+        subject: clampText(item.subject, 200),
+        strengths: clampTextList(item.strengths),
+        weaknesses: clampTextList(item.weaknesses),
+        sourceIds: clampSourceIds(item.sourceIds),
+      })),
+    gaps: clampTextList(report.gaps),
+    uncertainties: clampTextList(report.uncertainties),
+    conflicts: report.conflicts.slice(0, MAX_REPORT_LIST_ITEMS).map((item) => ({
+      topic: clampText(item.topic, 200),
+      statements: clampTextList(item.statements),
+      sourceIds: clampSourceIds(item.sourceIds),
+    })),
+  };
+}
 
 export function sanitizeReportCitations(
   report: ResearchReport,
@@ -247,7 +284,10 @@ export async function generateCitationBackedReport(input: {
       );
     }
 
-    const sanitized = sanitizeReportCitations(parsed.data, input.sources);
+    const sanitized = sanitizeReportCitations(
+      clampResearchReport(parsed.data),
+      input.sources,
+    );
     return renderCitationBackedReport({
       question: input.question,
       report: sanitized,

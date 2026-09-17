@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { MAX_SEARCH_RESULTS_PER_QUERY } from "@/lib/research/limits";
 import {
-  createTavilySearchTool,
-  normalizeTavilyResults,
-} from "@/lib/tools/search/tavily";
+  BRAVE_SEARCH_URL,
+  createBraveSearchTool,
+  normalizeBraveResults,
+} from "@/lib/tools/search/brave";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -12,23 +13,26 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-describe("Tavily search", () => {
-  it("returns normalized successful results", async () => {
+function webPayload(results: unknown[]) {
+  return { web: { results } };
+}
+
+describe("Brave search", () => {
+  it("returns normalized successful results and sends the Brave request", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({
-        results: [
+      jsonResponse(
+        webPayload([
           {
             title: "Stripe competitors",
             url: "https://example.com/stripe",
-            content: "Adyen and PayPal",
-            score: 0.91,
-            published_date: "2024-01-15",
+            description: "Adyen and PayPal",
+            page_age: "2024-01-15",
           },
-        ],
-      }),
+        ]),
+      ),
     );
 
-    const tool = createTavilySearchTool({
+    const tool = createBraveSearchTool({
       apiKey: "test-key",
       fetch: fetchMock,
     });
@@ -42,23 +46,47 @@ describe("Tavily search", () => {
           title: "Stripe competitors",
           snippet: "Adyen and PayPal",
           publishedAt: "2024-01-15",
-          score: 0.91,
         },
       ]);
+      expect(result.data.results[0]).not.toHaveProperty("score");
     }
+
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [requestUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsed = new URL(requestUrl);
+    expect(`${parsed.origin}${parsed.pathname}`).toBe(BRAVE_SEARCH_URL);
+    expect(parsed.searchParams.get("q")).toBe("Stripe competitors");
+    expect(parsed.searchParams.get("count")).toBe(
+      String(MAX_SEARCH_RESULTS_PER_QUERY),
+    );
+    expect(init.method).toBe("GET");
+    expect(init.headers).toMatchObject({
+      Accept: "application/json",
+      "X-Subscription-Token": "test-key",
+    });
   });
 
-  it("does not invent missing metadata", () => {
+  it("does not invent missing metadata and ignores non-web results", () => {
     expect(
-      normalizeTavilyResults({
-        results: [
-          {
-            url: "https://example.com/plain",
-            title: "Plain",
-            content: "Snippet only",
-          },
-        ],
+      normalizeBraveResults({
+        news: {
+          results: [
+            {
+              title: "News only",
+              url: "https://example.com/news",
+              description: "Should be ignored",
+            },
+          ],
+        },
+        web: {
+          results: [
+            {
+              url: "https://example.com/plain",
+              title: "Plain",
+              description: "Snippet only",
+            },
+          ],
+        },
       }),
     ).toEqual([
       {
@@ -73,14 +101,32 @@ describe("Tavily search", () => {
     const results = Array.from({ length: 8 }, (_, index) => ({
       title: `Result ${index + 1}`,
       url: `https://example.com/${index + 1}`,
-      content: `Snippet ${index + 1}`,
+      description: `Snippet ${index + 1}`,
     }));
-    results.splice(1, 0, { title: "Bad", url: "not-a-url", content: "x" });
+    results.splice(1, 0, { title: "Bad", url: "not-a-url", description: "x" });
 
-    const hits = normalizeTavilyResults({ results });
+    const hits = normalizeBraveResults(webPayload(results));
 
     expect(hits).toHaveLength(MAX_SEARCH_RESULTS_PER_QUERY);
     expect(hits.every((hit) => hit.url.startsWith("https://"))).toBe(true);
+  });
+
+  it("falls back to the URL and an empty snippet when title or description is missing", () => {
+    expect(
+      normalizeBraveResults(
+        webPayload([
+          {
+            url: "https://example.com/untitled",
+          },
+        ]),
+      ),
+    ).toEqual([
+      {
+        url: "https://example.com/untitled",
+        title: "https://example.com/untitled",
+        snippet: "",
+      },
+    ]);
   });
 
   it("retries a retryable HTTP error once the budget allows, then succeeds", async () => {
@@ -88,18 +134,18 @@ describe("Tavily search", () => {
       .fn()
       .mockResolvedValueOnce(jsonResponse({ error: "unavailable" }, 503))
       .mockResolvedValueOnce(
-        jsonResponse({
-          results: [
+        jsonResponse(
+          webPayload([
             {
               title: "Recovered",
               url: "https://example.com/recovered",
-              content: "ok",
+              description: "ok",
             },
-          ],
-        }),
+          ]),
+        ),
       );
 
-    const tool = createTavilySearchTool({
+    const tool = createBraveSearchTool({
       apiKey: "test-key",
       fetch: fetchMock,
     });
@@ -111,7 +157,7 @@ describe("Tavily search", () => {
 
   it("does not retry authentication failures", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: "no" }, 401));
-    const tool = createTavilySearchTool({
+    const tool = createBraveSearchTool({
       apiKey: "test-key",
       fetch: fetchMock,
     });
@@ -125,12 +171,28 @@ describe("Tavily search", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry forbidden responses", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: "no" }, 403));
+    const tool = createBraveSearchTool({
+      apiKey: "test-key",
+      fetch: fetchMock,
+    });
+    const result = await tool.execute({ query: "Stripe" }, {});
+
+    expect(result).toMatchObject({
+      ok: false,
+      retryable: false,
+      statusCode: 403,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("maps timeouts as retryable and stops after the retry budget", async () => {
     const timeout = Object.assign(new Error("The operation was aborted"), {
       name: "TimeoutError",
     });
     const fetchMock = vi.fn().mockRejectedValue(timeout);
-    const tool = createTavilySearchTool({
+    const tool = createBraveSearchTool({
       apiKey: "test-key",
       fetch: fetchMock,
     });
@@ -146,12 +208,12 @@ describe("Tavily search", () => {
 
   it("fails without calling the network when the API key is missing", async () => {
     const fetchMock = vi.fn();
-    const tool = createTavilySearchTool({ fetch: fetchMock });
+    const tool = createBraveSearchTool({ fetch: fetchMock });
     const result = await tool.execute({ query: "Stripe" }, {});
 
     expect(result).toEqual({
       ok: false,
-      error: "TAVILY_API_KEY is not set",
+      error: "BRAVE_API_KEY is not set",
       retryable: false,
     });
     expect(fetchMock).not.toHaveBeenCalled();

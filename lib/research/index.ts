@@ -30,6 +30,7 @@ export {
 export { analyseResearch, researchAnalysisSchema } from "./analyse";
 export {
   generateCitationBackedReport,
+  clampResearchReport,
   researchReportSchema,
   sanitizeReportCitations,
 } from "./report";

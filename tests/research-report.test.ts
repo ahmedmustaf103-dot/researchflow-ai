@@ -4,6 +4,7 @@ import type { GenerateObjectInput, LLMProvider } from "@/lib/ai/provider";
 import { sanitizeSourceIds } from "@/lib/research/citations";
 import { createMemoryResearchStore } from "@/lib/research/memory-store";
 import {
+  clampResearchReport,
   generateCitationBackedReport,
   renderCitationBackedReport,
   researchReportSchema,
@@ -239,5 +240,16 @@ describe("citation-backed reports", () => {
 
   it("validates the report schema shape", () => {
     expect(researchReportSchema.parse(report()).keyFindings).toHaveLength(1);
+  });
+
+  it("clamps oversized report lists after generation", () => {
+    const oversized = report({
+      keyFindings: Array.from({ length: 13 }, (_, index) => ({
+        text: `Finding ${index + 1}`,
+        sourceIds: ["S1"],
+      })),
+    });
+
+    expect(clampResearchReport(oversized).keyFindings).toHaveLength(12);
   });
 });

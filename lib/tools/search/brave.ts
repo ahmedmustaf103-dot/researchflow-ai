@@ -14,22 +14,20 @@ import { withRetries } from "@/lib/tools/retry";
 import type { InternalTool, ToolResult } from "@/lib/tools/types";
 import { searchInputSchema, type SearchInput, type SearchOutput } from "../search";
 
-export const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
+export const BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search";
 
-export type TavilySearchToolOptions = {
+export type BraveSearchToolOptions = {
   apiKey?: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
   maxResults?: number;
 };
 
-type TavilyResult = {
+type BraveWebResult = {
   title?: unknown;
   url?: unknown;
-  content?: unknown;
-  published_date?: unknown;
-  publishedDate?: unknown;
-  score?: unknown;
+  description?: unknown;
+  page_age?: unknown;
 };
 
 function asNonEmptyString(value: unknown): string | undefined {
@@ -38,16 +36,29 @@ function asNonEmptyString(value: unknown): string | undefined {
     : undefined;
 }
 
-function asFiniteNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+function isUsablePageAge(value: unknown): string | undefined {
+  return asNonEmptyString(value);
 }
 
-export function normalizeTavilyResults(
+export function braveSearchRequestUrl(
+  query: string,
+  count = MAX_SEARCH_RESULTS_PER_QUERY,
+): string {
+  const url = new URL(BRAVE_SEARCH_URL);
+  url.searchParams.set("q", query);
+  url.searchParams.set("count", String(count));
+  return url.toString();
+}
+
+export function normalizeBraveResults(
   raw: unknown,
   maxResults = MAX_SEARCH_RESULTS_PER_QUERY,
 ): SearchHit[] {
-  const payload = raw && typeof raw === "object" ? (raw as { results?: unknown }) : {};
-  const results = Array.isArray(payload.results) ? payload.results : [];
+  const payload = raw && typeof raw === "object" ? (raw as { web?: unknown }) : {};
+  const web = payload.web && typeof payload.web === "object"
+    ? (payload.web as { results?: unknown })
+    : {};
+  const results = Array.isArray(web.results) ? web.results : [];
   const hits: SearchHit[] = [];
 
   for (const item of results) {
@@ -55,7 +66,7 @@ export function normalizeTavilyResults(
       continue;
     }
 
-    const result = item as TavilyResult;
+    const result = item as BraveWebResult;
     const url = asNonEmptyString(result.url);
     if (!url) {
       continue;
@@ -67,17 +78,13 @@ export function normalizeTavilyResults(
       continue;
     }
 
-    const publishedAt =
-      asNonEmptyString(result.published_date) ??
-      asNonEmptyString(result.publishedDate);
-    const score = asFiniteNumber(result.score);
+    const publishedAt = isUsablePageAge(result.page_age);
 
     hits.push({
       url,
       title: asNonEmptyString(result.title) ?? url,
-      snippet: asNonEmptyString(result.content) ?? "",
+      snippet: asNonEmptyString(result.description) ?? "",
       ...(publishedAt ? { publishedAt } : {}),
-      ...(score !== undefined ? { score } : {}),
     });
 
     if (hits.length >= maxResults) {
@@ -88,15 +95,12 @@ export function normalizeTavilyResults(
   return hits;
 }
 
-function safeHttpMessage(status: number, body: string): string {
-  const compact = body.replace(/\s+/g, " ").trim().slice(0, 180);
-  return compact
-    ? `Tavily search failed (${status})`
-    : `Tavily search failed (${status})`;
+function safeHttpMessage(status: number): string {
+  return `Brave search failed (${status})`;
 }
 
-export function createTavilySearchTool(
-  options: TavilySearchToolOptions = {},
+export function createBraveSearchTool(
+  options: BraveSearchToolOptions = {},
 ): InternalTool<SearchInput, SearchOutput> {
   const fetchFn = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? SEARCH_TIMEOUT_MS;
@@ -105,14 +109,14 @@ export function createTavilySearchTool(
   return {
     source: "internal",
     name: "search",
-    description: "Search the web with Tavily and return normalized results.",
+    description: "Search the web with Brave Search and return normalized results.",
     inputSchema: searchInputSchema,
     async execute(input): Promise<ToolResult<SearchOutput>> {
       const apiKey = options.apiKey?.trim();
       if (!apiKey) {
         return {
           ok: false,
-          error: "TAVILY_API_KEY is not set",
+          error: "BRAVE_API_KEY is not set",
           retryable: false,
         };
       }
@@ -122,36 +126,33 @@ export function createTavilySearchTool(
           async () => {
             let response: Response;
             try {
-              response = await fetchFn(TAVILY_SEARCH_URL, {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${apiKey}`,
-                  "Content-Type": "application/json",
+              response = await fetchFn(
+                braveSearchRequestUrl(input.query.trim(), maxResults),
+                {
+                  method: "GET",
+                  headers: {
+                    Accept: "application/json",
+                    "X-Subscription-Token": apiKey,
+                  },
+                  signal: AbortSignal.timeout(timeoutMs),
                 },
-                body: JSON.stringify({
-                  query: input.query.trim(),
-                  max_results: maxResults,
-                  search_depth: "basic",
-                  include_answer: false,
-                }),
-                signal: AbortSignal.timeout(timeoutMs),
-              });
+              );
             } catch (error) {
-              throw mapUnknownToolError(error, "Tavily search request failed");
+              throw mapUnknownToolError(error, "Brave search request failed");
             }
 
             if (!response.ok) {
-              const body = await response.text().catch(() => "");
+              await response.text().catch(() => "");
               throw toolErrorFromHttpStatus(
                 response.status,
-                safeHttpMessage(response.status, body),
+                safeHttpMessage(response.status),
               );
             }
 
             try {
               return (await response.json()) as unknown;
             } catch (error) {
-              throw new ToolError("Tavily returned malformed search results", {
+              throw new ToolError("Brave returned malformed search results", {
                 code: "invalid_request",
                 retryable: false,
                 cause: error,
@@ -167,11 +168,11 @@ export function createTavilySearchTool(
         return {
           ok: true,
           data: {
-            results: normalizeTavilyResults(data, maxResults),
+            results: normalizeBraveResults(data, maxResults),
           },
         };
       } catch (error) {
-        const mapped = mapUnknownToolError(error, "Tavily search failed");
+        const mapped = mapUnknownToolError(error, "Brave search failed");
         return {
           ok: false,
           error: mapped.message,

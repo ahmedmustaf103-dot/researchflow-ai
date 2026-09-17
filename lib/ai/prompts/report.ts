@@ -7,6 +7,7 @@ Do not invent URLs.
 Do not invent database IDs.
 Do not use outside knowledge.
 
+Keep each list to at most 12 concise items.
 Cite evidence only with the provided source labels such as S1 or S2.
 If a statement has no supporting source, do not fabricate a citation.
 Put unsupported or missing information in gaps or uncertainties.

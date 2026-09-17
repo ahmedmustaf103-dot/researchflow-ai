@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { createJinaFetchPageTool } from "@/lib/tools/fetch-page/jina";
-import { createTavilySearchTool } from "@/lib/tools/search/tavily";
+import { createBraveSearchTool } from "@/lib/tools/search/brave";
 
 const enabled = process.env.LIVE_API_TESTS === "1";
+const braveApiKey = process.env.BRAVE_API_KEY?.trim();
 
-describe.skipIf(!enabled)("live Tavily search", () => {
+describe.skipIf(!enabled || !braveApiKey)("live Brave search", () => {
   it("returns normalized search results", async () => {
-    const tool = createTavilySearchTool();
+    const tool = createBraveSearchTool({
+      apiKey: process.env.BRAVE_API_KEY,
+    });
     const result = await tool.execute(
       { query: "Stripe competitors pricing" },
       {},
