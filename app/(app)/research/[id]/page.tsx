@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getResearchProjectForUser } from "@/lib/research/service";
+import { buildResearchTrace } from "@/lib/research/trace";
 import { ResearchProjectView } from "@/components/research/project-view";
 
 export default async function ResearchPage({
@@ -20,5 +21,13 @@ export default async function ResearchPage({
     notFound();
   }
 
-  return <ResearchProjectView projectId={id} initial={detail} />;
+  return (
+    <ResearchProjectView
+      projectId={id}
+      initial={{
+        ...detail,
+        trace: buildResearchTrace(detail),
+      }}
+    />
+  );
 }

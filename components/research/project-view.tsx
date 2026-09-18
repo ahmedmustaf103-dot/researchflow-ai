@@ -1,54 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ResearchProjectDetail, ResearchStage, ResearchStatus } from "@/lib/research/types";
-import { RESEARCH_STAGES } from "@/lib/research/types";
+import { useEffect, useMemo, useState } from "react";
+import type { ResearchProjectDetail } from "@/lib/research/types";
 import { isTerminalStatus } from "@/lib/research/status";
+import { buildResearchTrace } from "@/lib/research/trace";
+import type { ResearchTrace } from "@/lib/research/trace-types";
+import { ResearchTraceView } from "@/components/research/research-trace";
 
-type DetailPayload = ResearchProjectDetail;
-
-const STAGE_LABELS: Record<ResearchStage, string> = {
-  plan: "Plan",
-  search: "Search",
-  retrieve: "Retrieve",
-  enrich: "Enrich",
-  extract: "Extract",
-  verify: "Verify",
-  analyse: "Analyse",
-  report: "Report",
+type DetailPayload = ResearchProjectDetail & {
+  trace?: ResearchTrace;
 };
-
-function stagesCompleted(status: ResearchStatus): ResearchStage[] {
-  switch (status) {
-    case "queued":
-      return [];
-    case "planning":
-      return [];
-    case "researching":
-      return ["plan"];
-    case "verifying":
-      return ["plan", "search", "retrieve", "enrich", "extract"];
-    case "analysing":
-      return ["plan", "search", "retrieve", "enrich", "extract", "verify"];
-    case "reporting":
-      return [
-        "plan",
-        "search",
-        "retrieve",
-        "enrich",
-        "extract",
-        "verify",
-        "analyse",
-      ];
-    case "completed":
-      return [...RESEARCH_STAGES];
-    case "failed":
-    case "cancelled":
-      return [];
-    default:
-      return [];
-  }
-}
 
 export function ResearchProjectView({
   projectId,
@@ -89,16 +50,19 @@ export function ResearchProjectView({
     };
   }, [detail.status, projectId]);
 
-  const done = new Set(stagesCompleted(detail.status));
-  if (detail.tasks.length > 0) done.add("plan");
-  if (detail.sources.length > 0) done.add("search");
-  if (detail.sources.some((source) => source.content)) done.add("retrieve");
-  if (detail.findings.length > 0) done.add("extract");
-  if (detail.report) {
-    for (const stage of RESEARCH_STAGES) {
-      done.add(stage);
+  const trace = useMemo(() => {
+    if (detail.trace) {
+      return detail.trace;
     }
-  }
+    return buildResearchTrace({
+      project: detail.project,
+      status: detail.status,
+      tasks: detail.tasks,
+      sources: detail.sources,
+      findings: detail.findings,
+      report: detail.report,
+    });
+  }, [detail]);
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-6 py-8">
@@ -113,17 +77,7 @@ export function ResearchProjectView({
         ) : null}
       </section>
 
-      <section>
-        <h2 className="mb-3 text-lg font-medium">Stages</h2>
-        <ol className="space-y-2">
-          {RESEARCH_STAGES.map((stage) => (
-            <li key={stage} className="flex items-center gap-2 text-sm">
-              <span>{done.has(stage) ? "✓" : "○"}</span>
-              <span>{STAGE_LABELS[stage]}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <ResearchTraceView trace={trace} />
 
       <section>
         <h2 className="mb-3 text-lg font-medium">Tasks</h2>
@@ -132,7 +86,10 @@ export function ResearchProjectView({
         ) : (
           <ul className="space-y-2 text-sm">
             {detail.tasks.map((task) => (
-              <li key={task.id} className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
+              <li
+                key={task.id}
+                className="rounded border border-zinc-200 p-3 dark:border-zinc-800"
+              >
                 <div className="font-medium">{task.title}</div>
                 <div className="text-zinc-500">{task.status}</div>
                 <div>{task.query}</div>
@@ -152,6 +109,9 @@ export function ResearchProjectView({
               <li key={source.id}>
                 <div className="font-medium">{source.title}</div>
                 <div className="text-zinc-500">{source.url}</div>
+                {source.toolName ? (
+                  <div className="text-xs text-zinc-500">Tool: {source.toolName}</div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -165,7 +125,10 @@ export function ResearchProjectView({
         ) : (
           <ul className="space-y-2 text-sm">
             {detail.findings.map((finding) => (
-              <li key={finding.id} className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
+              <li
+                key={finding.id}
+                className="rounded border border-zinc-200 p-3 dark:border-zinc-800"
+              >
                 <div className="font-medium">
                   {finding.subject} — {finding.attribute}
                 </div>
@@ -184,7 +147,9 @@ export function ResearchProjectView({
             {detail.report.markdown}
           </pre>
         ) : (
-          <p className="text-sm text-zinc-500">Report will appear when the pipeline finishes.</p>
+          <p className="text-sm text-zinc-500">
+            Report will appear when the pipeline finishes.
+          </p>
         )}
       </section>
     </div>

@@ -87,7 +87,16 @@ describe("research API", () => {
   it("returns the caller's project", async () => {
     authMock.mockResolvedValue("user-1");
     getResearchProjectForUserMock.mockResolvedValue({
-      project: { id: "proj_1", userId: "user-1" },
+      project: {
+        id: "proj_1",
+        userId: "user-1",
+        title: "Stripe",
+        question: "Research Stripe",
+        status: "completed",
+        errorMessage: null,
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+      },
       status: "completed",
       tasks: [],
       sources: [],
@@ -103,6 +112,18 @@ describe("research API", () => {
 
     expect(response.status).toBe(200);
     expect(payload.project.id).toBe("proj_1");
+    expect(payload.trace).toBeDefined();
+    expect(payload.trace.projectId).toBe("proj_1");
+    expect(payload.trace.stages.map((stage: { id: string }) => stage.id)).toEqual([
+      "plan",
+      "search",
+      "retrieve",
+      "enrich",
+      "extract",
+      "verify",
+      "analyse",
+      "report",
+    ]);
     expect(getResearchProjectForUserMock).toHaveBeenCalledWith("proj_1", "user-1");
   });
 

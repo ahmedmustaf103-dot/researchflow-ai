@@ -54,3 +54,10 @@ export {
 export { createResearchInputSchema } from "./input";
 export { createMemoryResearchStore } from "./memory-store";
 export { setResearchStoreOverride } from "./runtime";
+export { buildResearchTrace, isMcpSource, isRetrievedSource, isFailedRetrieval } from "./trace";
+export type {
+  ResearchTrace,
+  ResearchTraceStage,
+  ResearchTraceItem,
+  TraceItemStatus,
+} from "./trace-types";

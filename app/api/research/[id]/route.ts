@@ -1,5 +1,6 @@
 import { getSessionUserId } from "@/lib/auth/session";
 import { getResearchProjectForUser } from "@/lib/research/service";
+import { buildResearchTrace } from "@/lib/research/trace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,5 +28,6 @@ export async function GET(
     sources: detail.sources,
     findings: detail.findings,
     report: detail.report,
+    trace: buildResearchTrace(detail),
   });
 }

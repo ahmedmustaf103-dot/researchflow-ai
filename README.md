@@ -18,7 +18,7 @@ Question
 
 This is a public portfolio project, built in phases. It is not a fully autonomous research agent.
 
-**Current checkpoint: Phase 4.** Gemini plans the research, extracts quote-backed evidence, analyses the findings, and writes a citation-backed report. Brave Search searches the web and Jina retrieves pages. A local MCP server enriches selected company domains with structured fixture profiles. A deterministic evaluation layer scores research quality and reliability offline. Report citations are validated against project sources.
+**Current checkpoint: Phase 5.** Gemini plans the research, extracts quote-backed evidence, analyses the findings, and writes a citation-backed report. Brave Search searches the web and Jina retrieves pages. A local MCP server enriches selected company domains with structured fixture profiles. A deterministic evaluation layer scores research quality and reliability offline. A Research Trace shows provenance from question through report using persisted project data.
 
 ## Why I built it
 
@@ -32,6 +32,7 @@ The architecture emphasises:
 - MCP as a real client/server capability boundary
 - dependency injection so production uses Gemini and tests use mocks
 - a domain model for sources, findings, and reports
+- a Research Trace that explains how an answer was produced
 - validation at system boundaries
 - typed retries and error handling for external model calls
 - deterministic, fixture-based evaluations for research quality and reliability
@@ -51,6 +52,7 @@ The architecture emphasises:
 - [x] Citation-backed reports — Phase 2D
 - [x] MCP company enrichment — Phase 3
 - [x] Evaluations + reliability — Phase 4
+- [x] Research Trace — Phase 5
 - [ ] RAG / embeddings — later
 
 You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, review Brave Search sources and Jina page content, inspect MCP company-profile Sources, inspect quote-verified findings, and read a citation-backed report whose URLs come from the database.
@@ -150,6 +152,26 @@ npm run test:eval
 ```
 
 The suite also runs as part of `npm test`.
+
+## Research Trace (Phase 5)
+
+Research Trace provides transparent provenance from:
+
+```text
+research question
+→ planning
+→ search
+→ retrieval
+→ MCP enrichment
+→ evidence
+→ verification
+→ analysis
+→ report
+```
+
+It is **derived from persisted research data** (tasks, sources, findings, report). The UI and `GET /api/research/[id]` expose a structured `trace` object built by a pure function — no second event log and no Prisma schema change.
+
+The trace intentionally does **not** claim events that were never stored, such as rejected-quote counts, failed MCP lookup counts, or search-hit discard counts.
 
 ## Tech stack
 
