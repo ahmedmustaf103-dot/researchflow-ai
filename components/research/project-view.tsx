@@ -11,6 +11,7 @@ const STAGE_LABELS: Record<ResearchStage, string> = {
   plan: "Plan",
   search: "Search",
   retrieve: "Retrieve",
+  enrich: "Enrich",
   extract: "Extract",
   verify: "Verify",
   analyse: "Analyse",
@@ -26,11 +27,19 @@ function stagesCompleted(status: ResearchStatus): ResearchStage[] {
     case "researching":
       return ["plan"];
     case "verifying":
-      return ["plan", "search", "retrieve", "extract"];
+      return ["plan", "search", "retrieve", "enrich", "extract"];
     case "analysing":
-      return ["plan", "search", "retrieve", "extract", "verify"];
+      return ["plan", "search", "retrieve", "enrich", "extract", "verify"];
     case "reporting":
-      return ["plan", "search", "retrieve", "extract", "verify", "analyse"];
+      return [
+        "plan",
+        "search",
+        "retrieve",
+        "enrich",
+        "extract",
+        "verify",
+        "analyse",
+      ];
     case "completed":
       return [...RESEARCH_STAGES];
     case "failed":

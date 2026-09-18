@@ -1,0 +1,92 @@
+{
+  "stripe.com": {
+    "domain": "stripe.com",
+    "name": "Stripe",
+    "summary": "Stripe is a financial infrastructure platform that helps businesses accept payments and manage online commerce.",
+    "products": ["Payments", "Billing", "Connect", "Radar", "Treasury"],
+    "targetCustomers": [
+      "Internet businesses",
+      "Marketplaces",
+      "SaaS companies",
+      "Platforms"
+    ],
+    "pricingNotes": [
+      "Pay-as-you-go card processing fees",
+      "Additional fees for products such as Billing and Radar"
+    ],
+    "strengths": [
+      "Developer-friendly APIs",
+      "Broad global payment methods",
+      "Strong platform and marketplace tooling"
+    ],
+    "sources": [
+      {
+        "title": "Stripe fixture overview",
+        "url": "https://stripe.com/"
+      }
+    ]
+  },
+  "adyen.com": {
+    "domain": "adyen.com",
+    "name": "Adyen",
+    "summary": "Adyen is a global payments platform that unifies online, mobile, and in-person acquiring for enterprise merchants.",
+    "products": [
+      "Unified commerce payments",
+      "Issuing",
+      "Risk management",
+      "Data reporting"
+    ],
+    "targetCustomers": [
+      "Enterprise retailers",
+      "Global marketplaces",
+      "Travel and hospitality brands"
+    ],
+    "pricingNotes": [
+      "Interchange++ pricing for many merchants",
+      "Enterprise contracts are common"
+    ],
+    "strengths": [
+      "Single platform across channels",
+      "Strong enterprise acquiring footprint",
+      "Global settlement capabilities"
+    ],
+    "sources": [
+      {
+        "title": "Adyen fixture overview",
+        "url": "https://www.adyen.com/"
+      }
+    ]
+  },
+  "paypal.com": {
+    "domain": "paypal.com",
+    "name": "PayPal",
+    "summary": "PayPal provides consumer and merchant payment products spanning checkout, wallets, and business disbursements.",
+    "products": [
+      "Checkout",
+      "PayPal Wallet",
+      "Venmo",
+      "Braintree",
+      "PayPal Working Capital"
+    ],
+    "targetCustomers": [
+      "Small and mid-sized merchants",
+      "Marketplaces",
+      "Consumer peer-to-peer users"
+    ],
+    "pricingNotes": [
+      "Standard merchant transaction fees",
+      "Wallet and branded checkout options"
+    ],
+    "strengths": [
+      "Large consumer brand recognition",
+      "Broad buyer trust and coverage",
+      "Multiple checkout experiences"
+    ],
+    "sources": [
+      {
+        "title": "PayPal fixture overview",
+        "url": "https://www.paypal.com/"
+      }
+    ]
+  }
+}

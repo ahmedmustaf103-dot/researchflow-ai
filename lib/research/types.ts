@@ -33,6 +33,7 @@ export const RESEARCH_STAGES = [
   "plan",
   "search",
   "retrieve",
+  "enrich",
   "extract",
   "verify",
   "analyse",

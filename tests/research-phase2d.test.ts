@@ -57,6 +57,7 @@ describe("Phase 2D pipeline", () => {
       "plan",
       "search",
       "retrieve",
+      "enrich",
       "extract",
       "verify",
     ]);
@@ -83,6 +84,7 @@ describe("Phase 2D pipeline", () => {
       "plan",
       "search",
       "retrieve",
+      "enrich",
       "extract",
       "verify",
       "analyse",

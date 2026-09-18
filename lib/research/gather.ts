@@ -112,6 +112,10 @@ export async function retrieveResearchSources(
   const sources = selectSourcesForRetrieval(await store.listSources(projectId));
 
   await mapWithConcurrency(sources, MAX_FETCH_CONCURRENCY, async (source) => {
+    if (source.url.startsWith("mcp://")) {
+      return;
+    }
+
     const input = fetchTool.inputSchema.parse({ url: source.url });
     const result = await fetchTool.execute(input, { projectId });
 

@@ -1,7 +1,14 @@
 import type { LLMProvider } from "@/lib/ai/provider";
 import { createMockToolRegistry } from "@/lib/tools/mock-registry";
 import type { ToolRegistry } from "@/lib/tools/registry";
+import type { MCPClient } from "@/lib/tools/mcp";
+import {
+  COMPANY_RESEARCH_SERVER_ID,
+  LOOKUP_COMPANY_PROFILE_TOOL,
+} from "@/lib/tools/mcp/schemas";
+import { createCompanyResearchServerConfig } from "@/lib/tools/mcp/client";
 import { ResearchNotFoundError, ResearchStageError } from "./errors";
+import { enrichResearchWithCompanyProfiles } from "./enrich";
 import { retrieveResearchSources, searchResearchTasks } from "./gather";
 import { planResearch } from "./plan";
 import { isTerminalStatus } from "./status";
@@ -17,6 +24,7 @@ export type PipelineOptions = {
   store: ResearchStore;
   tools?: ToolRegistry;
   llm: LLMProvider;
+  mcp?: MCPClient;
   failAt?: ResearchStage;
 };
 
@@ -44,6 +52,19 @@ async function requireTool(
     );
   }
   return tool;
+}
+
+async function withConnectedMcp(
+  mcp: MCPClient,
+  run: (client: MCPClient) => Promise<void>,
+): Promise<void> {
+  const config = createCompanyResearchServerConfig();
+  await mcp.connect(config);
+  try {
+    await run(mcp);
+  } finally {
+    await mcp.disconnect(config.id);
+  }
 }
 
 export async function runResearchPipeline(
@@ -100,6 +121,39 @@ export async function runResearchPipeline(
       if (stage === "retrieve") {
         const fetchTool = await requireTool(tools, "fetch_page", "retrieve");
         await retrieveResearchSources(projectId, store, fetchTool);
+        executedStages.push(stage);
+        continue;
+      }
+
+      if (stage === "enrich") {
+        // Best-effort MCP enrichment. Soft-fails per domain; never fails the project.
+        if (options.mcp) {
+          const mcpTool = tools.getMcp(
+            COMPANY_RESEARCH_SERVER_ID,
+            LOOKUP_COMPANY_PROFILE_TOOL,
+          );
+          if (!mcpTool) {
+            console.error(
+              `[research enrich] MCP tool not registered project=${projectId}`,
+            );
+          } else {
+            try {
+              await withConnectedMcp(options.mcp, async (mcp) => {
+                await enrichResearchWithCompanyProfiles({
+                  projectId,
+                  store,
+                  mcp,
+                });
+              });
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : "unknown error";
+              console.error(
+                `[research enrich] MCP stage failed project=${projectId} error=${message}`,
+              );
+            }
+          }
+        }
         executedStages.push(stage);
         continue;
       }

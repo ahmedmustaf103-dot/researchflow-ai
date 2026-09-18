@@ -30,8 +30,9 @@ export interface MCPToolDefinition {
 }
 
 /**
- * Client used by the tool registry / research agent to talk to MCP servers.
- * Concrete transports are implemented in a later phase.
+ * Client used by the tool registry / research orchestrator to talk to MCP servers.
+ * Execution goes through callTool — never through InternalTool.execute.
+ * Gemini does not choose or invoke MCP tools.
  */
 export interface MCPClient {
   connect(config: MCPServerConfig): Promise<void>;

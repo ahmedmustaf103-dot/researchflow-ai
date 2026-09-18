@@ -17,3 +17,4 @@ export const MAX_ANALYSIS_QUOTE_CHARS = 400;
 export const MAX_ANALYSIS_TEXT_LENGTH = 2_000;
 export const MAX_REPORT_TEXT_LENGTH = 2_000;
 export const MAX_REPORT_LIST_ITEMS = 12;
+export const MAX_MCP_ENRICH_DOMAINS = 3;
