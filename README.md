@@ -18,7 +18,7 @@ Question
 
 This is a public portfolio project, built in phases. It is not a fully autonomous research agent.
 
-**Current checkpoint: Phase 3.** Gemini plans the research, extracts quote-backed evidence, analyses the findings, and writes a citation-backed report. Brave Search searches the web and Jina retrieves pages. A local MCP server enriches selected company domains with structured fixture profiles. Report citations are validated against project sources.
+**Current checkpoint: Phase 4.** Gemini plans the research, extracts quote-backed evidence, analyses the findings, and writes a citation-backed report. Brave Search searches the web and Jina retrieves pages. A local MCP server enriches selected company domains with structured fixture profiles. A deterministic evaluation layer scores research quality and reliability offline. Report citations are validated against project sources.
 
 ## Why I built it
 
@@ -34,7 +34,8 @@ The architecture emphasises:
 - a domain model for sources, findings, and reports
 - validation at system boundaries
 - typed retries and error handling for external model calls
-- evaluation and RAG as planned extensions rather than unfinished claims
+- deterministic, fixture-based evaluations for research quality and reliability
+- RAG as a planned extension rather than an unfinished claim
 
 ## Current status
 
@@ -49,6 +50,7 @@ The architecture emphasises:
 - [x] AI analysis — Phase 2D
 - [x] Citation-backed reports — Phase 2D
 - [x] MCP company enrichment — Phase 3
+- [x] Evaluations + reliability — Phase 4
 - [ ] RAG / embeddings — later
 
 You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, review Brave Search sources and Jina page content, inspect MCP company-profile Sources, inspect quote-verified findings, and read a citation-backed report whose URLs come from the database.
@@ -99,10 +101,10 @@ app/            UI and thin HTTP routes
 lib/research/   orchestration, domain rules, and persistence adapters
 lib/ai/         LLMProvider, Gemini, prompts, and test mocks
 lib/tools/      internal tools + MCP client/server
+lib/eval/       deterministic quality + reliability evaluations
 lib/auth/       Auth.js
 lib/db/         Prisma
 lib/rag/        placeholder
-lib/eval/       placeholder
 ```
 
 The Prisma schema already models `ResearchProject`, `ResearchTask`, `Source`, `Finding`, `Report`, and `Message`.
@@ -118,6 +120,7 @@ The Prisma schema already models `ResearchProject`, `ResearchTask`, `Source`, `F
 - The company-research MCP server is **fixture-backed** for this portfolio/demo milestone. It is not a live external company-data API and must not be described as one.
 - Production injects `GeminiProvider`, the production tool registry, and a stdio MCP client. Tests inject `MockLLMProvider`, mock tools, and an in-process MCP client, so `npm test` never requires live API keys.
 - Transient Gemini, Brave Search, and Jina failures retry within bounded limits, then fail that call. MCP enrichment is best-effort: one domain failure does not fail the project.
+- Phase 4 evaluations sit **beside** the pipeline. They score fixture-driven quality and reliability outcomes without calling live APIs.
 
 ## MCP
 
@@ -127,6 +130,26 @@ The Prisma schema already models `ResearchProject`, `ResearchTask`, `Source`, `F
 - **Client:** application wrapper around the official MCP client; validates responses with Zod
 - **Persistence:** successful lookups become Sources with `url = mcp://company-profile/{domain}` and `toolName = mcp:lookup_company_profile`
 - **Safety:** `mcp://` URLs are never sent through Jina
+
+## Evaluations + reliability (Phase 4)
+
+Ordinary unit tests prove individual functions. The eval layer measures research-system behaviour as structured scorecards:
+
+- planning constraints (task count, non-empty fields, sort order)
+- quote support rate (supported / attempted — not forced to 100%)
+- hallucinated quote rejection
+- citation hygiene (invented IDs/URLs rejected)
+- conflict detection from opposing fixture findings
+- MCP / pipeline failure isolation
+- retry budgets and non-retryable auth failures
+
+Evaluations are **deterministic and fixture-based**. They use `MockLLMProvider`, mock tools, and in-memory stores. They require **no API keys** and do not call Gemini, Brave, Jina, or live company APIs. Fixture payment-company text is demo/test data only — not live research.
+
+```bash
+npm run test:eval
+```
+
+The suite also runs as part of `npm test`.
 
 ## Tech stack
 
@@ -151,9 +174,15 @@ From the current repository:
 
 ## Testing
 
-Vitest covers unit, pipeline, store, MCP, and API tests. Default `npm test` uses the mocked LLM provider and excludes live Gemini calls.
+Vitest covers unit, pipeline, store, MCP, eval, and API tests. Default `npm test` uses the mocked LLM provider and excludes live Gemini calls.
 
-Default `npm test` uses mocked LLM, search, and Jina providers, plus an in-process MCP protocol client against local fixtures. No live company-data API is required. Current default suite: **21 files, 129 tests**.
+Default `npm test` uses mocked LLM, search, and Jina providers, plus an in-process MCP protocol client against local fixtures. No live company-data API is required.
+
+Offline evaluations:
+
+```bash
+npm run test:eval
+```
 
 Also validated locally:
 
@@ -169,7 +198,7 @@ LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts
 
 ## Roadmap
 
-- **Later** — RAG, embeddings, and advanced evaluations
+- **Later** — RAG and embeddings
 - Optional later MCP work — replace fixture company profiles with a real provider behind the same tool contract
 
 ## Engineering principles
@@ -199,6 +228,7 @@ MCP company enrichment uses local fixtures over stdio. No company-data API key i
 - `npm run dev` — development server
 - `npm run typecheck` — TypeScript
 - `npm run lint` — ESLint
-- `npm test` — Vitest
+- `npm test` — Vitest (includes eval suite)
+- `npm run test:eval` — Phase 4 quality + reliability evaluations only
 - `LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts` — optional live Gemini planning test
 - `npm run build` — production build
