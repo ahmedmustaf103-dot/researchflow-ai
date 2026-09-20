@@ -6,6 +6,7 @@ import {
   getResearchProjectForUser,
   runQueuedResearchPipeline,
 } from "@/lib/research/service";
+import { MCP_COMPANY_PROFILE_TOOL_NAME } from "@/lib/tools/mcp/schemas";
 import { loadEnvLocal } from "./load-env-local";
 
 loadEnvLocal();
@@ -44,6 +45,14 @@ function collectCitedSourceIds(outline: unknown): string[] {
     ...(report.strengthsWeaknesses ?? []).flatMap((item) => item.sourceIds ?? []),
     ...(report.conflicts ?? []).flatMap((item) => item.sourceIds ?? []),
   ];
+}
+
+function isHttpSourceUrl(url: string): boolean {
+  return url.startsWith("https://") || url.startsWith("http://");
+}
+
+function isAllowedSourceUrl(url: string): boolean {
+  return isHttpSourceUrl(url) || url.startsWith("mcp://");
 }
 
 function markdownHttpUrls(markdown: string): string[] {
@@ -117,13 +126,27 @@ describe.skipIf(!canRun)("live Prisma research pipeline E2E", () => {
       expect(detail.sources.length).toBeGreaterThan(0);
       for (const source of detail.sources) {
         expect(() => new URL(source.url)).not.toThrow();
-        expect(source.url.startsWith("http")).toBe(true);
+        expect(isAllowedSourceUrl(source.url)).toBe(true);
         expect(source.projectId).toBe(project.id);
+      }
+
+      // When MCP enrichment ran, persisted Sources must be mcp:// company-profile evidence.
+      const mcpSources = detail.sources.filter((source) =>
+        source.url.startsWith("mcp://"),
+      );
+      for (const mcpSource of mcpSources) {
+        expect(mcpSource.url.startsWith("mcp://")).toBe(true);
+        expect(mcpSource.toolName).toBe(MCP_COMPANY_PROFILE_TOOL_NAME);
+        expect(mcpSource.projectId).toBe(project.id);
       }
 
       expect(detail.findings.length).toBeGreaterThan(0);
       const sourceIds = new Set(detail.sources.map((source) => source.id));
-      const sourceUrls = new Set(detail.sources.map((source) => source.url));
+      const httpSourceUrls = new Set(
+        detail.sources
+          .filter((source) => isHttpSourceUrl(source.url))
+          .map((source) => source.url),
+      );
       for (const finding of detail.findings) {
         expect(sourceIds.has(finding.sourceId)).toBe(true);
         expect(finding.projectId).toBe(project.id);
@@ -138,8 +161,9 @@ describe.skipIf(!canRun)("live Prisma research pipeline E2E", () => {
         expect(sourceIds.has(sourceId)).toBe(true);
       }
 
+      // Browser citation URLs in markdown must map to HTTP(S) Sources only.
       for (const url of markdownHttpUrls(detail.report?.markdown ?? "")) {
-        expect(sourceUrls.has(url)).toBe(true);
+        expect(httpSourceUrls.has(url)).toBe(true);
       }
     },
     600_000,
