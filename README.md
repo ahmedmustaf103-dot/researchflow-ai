@@ -1,8 +1,6 @@
 # ResearchFlow AI
 
-An AI-powered business and market research platform that turns complex research questions into structured, evidence-backed reports.
-
-The intended workflow is:
+Evidence-backed business and market research, built as a **deterministic pipeline** rather than an uncontrolled agent loop.
 
 ```text
 Question
@@ -16,46 +14,36 @@ Question
 → Report
 ```
 
-This is a public portfolio project, built in phases. It is not a fully autonomous research agent.
+This is a public portfolio project. It is not a fully autonomous research agent.
 
-**Current checkpoint: Phase 5.** Gemini plans the research, extracts quote-backed evidence, analyses the findings, and writes a citation-backed report. Brave Search searches the web and Jina retrieves pages. A local MCP server enriches selected company domains with structured fixture profiles. A deterministic evaluation layer scores research quality and reliability offline. A Research Trace shows provenance from question through report using persisted project data.
+**What it includes today:** Gemini structured planning, extraction, analysis, and reporting; Brave Search; Jina page retrieval; MCP company-profile enrichment over real stdio; quote verification; citation validation against persisted Sources; a Research Trace for provenance; a fixture-based evaluation/reliability suite; and bounded Gemini retries with short backoff on HTTP 429.
 
 ## Why I built it
 
-The project is designed to demonstrate practical AI engineering and software engineering, not just calling an LLM.
-
-The architecture emphasises:
+The architecture emphasises practical AI engineering:
 
 - structured LLM outputs with Zod validation
-- a deterministic research pipeline instead of an uncontrolled agent loop
+- deterministic orchestration instead of a free-roaming agent loop
 - tool interfaces for search and page retrieval
 - MCP as a real client/server capability boundary
-- dependency injection so production uses Gemini and tests use mocks
-- a domain model for sources, findings, and reports
-- a Research Trace that explains how an answer was produced
-- validation at system boundaries
+- dependency injection (production Gemini / mocks in tests)
+- evidence grounding: quote checks and citation hygiene
+- Research Trace over persisted project data
 - typed retries and error handling for external model calls
-- deterministic, fixture-based evaluations for research quality and reliability
-- RAG as a planned extension rather than an unfinished claim
+- deterministic evaluations for quality and reliability
+- RAG as a planned extension, not an unfinished claim
 
-## Current status
+## Demo
 
-- [x] Project foundation
-- [x] Authentication foundation
-- [x] Research domain model
-- [x] Deterministic research pipeline
-- [x] Gemini structured research planning
-- [x] Real web search — Phase 2B
-- [x] Real page retrieval — Phase 2B
-- [x] Evidence extraction — Phase 2C
-- [x] AI analysis — Phase 2D
-- [x] Citation-backed reports — Phase 2D
-- [x] MCP company enrichment — Phase 3
-- [x] Evaluations + reliability — Phase 4
-- [x] Research Trace — Phase 5
-- [ ] RAG / embeddings — later
+Example question:
 
-You can sign in with Google (when OAuth is configured), submit a research question, inspect Gemini-generated tasks, review Brave Search sources and Jina page content, inspect MCP company-profile Sources, inspect quote-verified findings, and read a citation-backed report whose URLs come from the database.
+> What are the top competitors of Stripe? Compare pricing, target market, features, strengths and weaknesses.
+
+That path exercises:
+
+**Question → Plan → Search → Retrieve → MCP Enrichment → Extract → Verify → Analyse → Report**
+
+When Brave returns fixture domains such as `stripe.com`, `adyen.com`, or `paypal.com`, MCP enrichment can attach structured company-profile Sources (`mcp://…`) alongside normal HTTP(S) Sources.
 
 ## Architecture
 
@@ -109,128 +97,90 @@ lib/db/         Prisma
 lib/rag/        placeholder
 ```
 
-The Prisma schema already models `ResearchProject`, `ResearchTask`, `Source`, `Finding`, `Report`, and `Message`.
-
 ## AI architecture
 
 - Gemini is behind the `LLMProvider` interface. Research stages do not import `@ai-sdk/google`.
-- Structured planning, extraction, analysis, and reports use `generateObject` plus Zod schemas. Findings are quote-checked against the retrieved source. Report citations are validated against the project's stored source IDs. The application attaches source IDs and trusted URLs; the model never creates sources.
-- Application code enforces limits after the model returns. Empty goals, titles, and queries are rejected. Extra tasks are clamped and `sortOrder` is normalised.
+- Structured planning, extraction, analysis, and reports use `generateObject` plus Zod schemas. Findings are quote-checked against the retrieved source. Report citations are validated against stored source IDs.
 - The pipeline is deterministic. It does not run a free-roaming agent loop.
-- Search and retrieval are represented as internal tools. Production uses Brave Search and Jina; tests inject mock tools.
-- MCP enrichment is a separate client/server boundary. The orchestrator selects domains from persisted HTTP(S) Sources and calls `MCPClient.callTool("company-research", "lookup_company_profile", { domain })`. Gemini never selects MCP tools.
-- The company-research MCP server is **fixture-backed** for this portfolio/demo milestone. It is not a live external company-data API and must not be described as one.
-- Production injects `GeminiProvider`, the production tool registry, and a stdio MCP client. Tests inject `MockLLMProvider`, mock tools, and an in-process MCP client, so `npm test` never requires live API keys.
-- Transient Gemini, Brave Search, and Jina failures retry within bounded limits, then fail that call. MCP enrichment is best-effort: one domain failure does not fail the project.
-- Phase 4 evaluations sit **beside** the pipeline. They score fixture-driven quality and reliability outcomes without calling live APIs.
+- Search and retrieval are internal tools. Production uses Brave and Jina; tests inject mocks.
+- MCP enrichment is a separate client/server boundary. Gemini never selects MCP tools.
+- The company-research MCP server is **fixture-backed** for this portfolio milestone — not a live external company-data API.
+- Transient Gemini failures retry once within a bounded budget; HTTP 429 waits for Retry-After (or a short capped backoff) before that single retry. Brave/Jina use their own bounded retries. MCP enrichment is best-effort.
+- Phase 4 evaluations sit **beside** the pipeline and score fixture-driven quality/reliability without live APIs.
 
 ## MCP
 
 - **Server:** local `company-research` MCP server over stdio (`@modelcontextprotocol/sdk`)
 - **Tool:** `lookup_company_profile` with `{ domain: string }`
 - **Provider:** deterministic local fixtures (`stripe.com`, `adyen.com`, `paypal.com`)
-- **Client:** application wrapper around the official MCP client; validates responses with Zod
+- **Client:** application wrapper; Zod-validated responses
 - **Persistence:** successful lookups become Sources with `url = mcp://company-profile/{domain}` and `toolName = mcp:lookup_company_profile`
 - **Safety:** `mcp://` URLs are never sent through Jina
 
-## Evaluations + reliability (Phase 4)
+## Evaluations + reliability
 
-Ordinary unit tests prove individual functions. The eval layer measures research-system behaviour as structured scorecards:
-
-- planning constraints (task count, non-empty fields, sort order)
-- quote support rate (supported / attempted — not forced to 100%)
-- hallucinated quote rejection
-- citation hygiene (invented IDs/URLs rejected)
-- conflict detection from opposing fixture findings
-- MCP / pipeline failure isolation
-- retry budgets and non-retryable auth failures
-
-Evaluations are **deterministic and fixture-based**. They use `MockLLMProvider`, mock tools, and in-memory stores. They require **no API keys** and do not call Gemini, Brave, Jina, or live company APIs. Fixture payment-company text is demo/test data only — not live research.
+Ordinary unit tests prove functions. The eval layer measures research-system behaviour as structured scorecards: planning constraints, quote support rate, hallucinated-quote rejection, citation hygiene, conflict detection, MCP/pipeline failure isolation, and retry budgets.
 
 ```bash
 npm run test:eval
 ```
 
-The suite also runs as part of `npm test`.
+Also runs as part of `npm test`. No API keys required.
 
-## Research Trace (Phase 5)
+## Research Trace
 
-Research Trace provides transparent provenance from:
+Transparent provenance from question through report, **derived from persisted research data** (tasks, sources, findings, report). Exposed in the UI and via `GET /api/research/[id]` as a structured `trace` object.
 
-```text
-research question
-→ planning
-→ search
-→ retrieval
-→ MCP enrichment
-→ evidence
-→ verification
-→ analysis
-→ report
-```
+It does **not** invent events that were never stored (for example rejected-quote counts or failed MCP lookup counts).
 
-It is **derived from persisted research data** (tasks, sources, findings, report). The UI and `GET /api/research/[id]` expose a structured `trace` object built by a pure function — no second event log and no Prisma schema change.
+## Verification status
 
-The trace intentionally does **not** claim events that were never stored, such as rejected-quote counts, failed MCP lookup counts, or search-hit discard counts.
+| Layer | Status |
+| --- | --- |
+| Unit / integration tests (`npm test`) | **PASS** |
+| Evaluation suite (`npm run test:eval`) | **PASS** |
+| TypeScript (`npm run typecheck`) | **PASS** |
+| ESLint (`npm run lint`) | **PASS** |
+| Production build (`npm run build`) | **PASS** |
+| Full live Prisma + Gemini + Brave + Jina + MCP E2E | **PENDING** |
 
-## Tech stack
+**External live verification is not claimed as passed.** Two live full-pipeline runs reached real Brave/MCP/Gemini stages and then stopped on Gemini **HTTP 429** quota/rate-limit responses. That is an external API limit, not treated here as a successful E2E result.
 
-From the current repository:
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- PostgreSQL
-- Prisma 6
-- Gemini (`gemini-2.5-flash` by default)
-- Brave Search
-- Jina Reader
-- Model Context Protocol (`@modelcontextprotocol/sdk`)
-- Vercel AI SDK
-- Auth.js v5
-- Zod 4
-- Vitest
-- ESLint
-- Docker Compose for local Postgres
-
-## Testing
-
-Vitest covers unit, pipeline, store, MCP, eval, and API tests. Default `npm test` uses the mocked LLM provider and excludes live Gemini calls.
-
-Default `npm test` uses mocked LLM, search, and Jina providers, plus an in-process MCP protocol client against local fixtures. No live company-data API is required.
-
-Offline evaluations:
-
-```bash
-npm run test:eval
-```
-
-Also validated locally:
-
-- `npx tsc --noEmit`
-- `npx eslint .`
-- `npm run build`
-
-Optional live tests, only when `LIVE_API_TESTS=1`:
+Optional live suite (requires keys; may hit quota):
 
 ```bash
 LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts
 ```
 
+Includes focused live tests plus `tests/live/pipeline-e2e.test.ts` (full production pipeline against PostgreSQL with real Gemini, Brave, Jina, and MCP stdio). Do not interpret a skipped or 429-failed run as a green live E2E.
+
+## Limitations
+
+- MCP company profiles are **fixture-backed demo data**, not live company-data APIs.
+- Google sign-in needs `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` for local auth testing.
+- Full live E2E remains **pending** because of external Gemini quota/rate limiting (HTTP 429).
+- Research Trace reconstructs provenance from persisted application data; it is **not** a complete event log.
+
+## Tech stack
+
+Next.js 16, React 19, TypeScript, Tailwind CSS 4, PostgreSQL, Prisma 6, Gemini (`gemini-2.5-flash` by default), Brave Search, Jina Reader, Model Context Protocol (`@modelcontextprotocol/sdk`), Vercel AI SDK, Auth.js v5, Zod 4, Vitest, ESLint, Docker Compose.
+
+## Testing
+
+Default `npm test` uses mocked LLM, search, and Jina providers, plus an in-process MCP client against local fixtures. No live API keys required.
+
+```bash
+npm test
+npm run test:eval
+npm run typecheck
+npm run lint
+npm run build
+```
+
 ## Roadmap
 
 - **Later** — RAG and embeddings
-- Optional later MCP work — replace fixture company profiles with a real provider behind the same tool contract
-
-## Engineering principles
-
-- Deterministic orchestration over uncontrolled agent loops
-- Structured outputs over free-form parsing
-- Validation at system boundaries
-- Dependency injection for testability
-- Graceful handling of missing keys, timeouts, rate limits, and invalid model output
-- Evidence-backed AI outputs as the product direction
+- Optional later MCP work — replace fixture profiles with a real provider behind the same tool contract
 
 ## Setup
 
@@ -239,11 +189,7 @@ LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts
 3. Generate the Prisma client and apply migrations: `npx prisma generate && npx prisma migrate deploy`
 4. Run the app: `npm run dev`
 
-Google sign-in needs `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`. The app boots without them; sign-in stays disabled until those values are set.
-
-Gemini planning needs `GEMINI_API_KEY`. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. Brave Search needs `BRAVE_API_KEY`. Jina retrieval works without `JINA_API_KEY`, but a key raises rate limits. The app boots without these keys; live stages fail with a clear error instead of inventing results.
-
-MCP company enrichment uses local fixtures over stdio. No company-data API key is required for Phase 3.
+Google sign-in needs `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`. Gemini needs `GEMINI_API_KEY`. Brave Search needs `BRAVE_API_KEY`. Jina works without `JINA_API_KEY` (a key raises rate limits). MCP enrichment uses local fixtures over stdio — no company-data API key.
 
 ## Scripts
 
@@ -251,6 +197,10 @@ MCP company enrichment uses local fixtures over stdio. No company-data API key i
 - `npm run typecheck` — TypeScript
 - `npm run lint` — ESLint
 - `npm test` — Vitest (includes eval suite)
-- `npm run test:eval` — Phase 4 quality + reliability evaluations only
-- `LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts` — optional live Gemini planning test
+- `npm run test:eval` — quality + reliability evaluations only
+- `LIVE_API_TESTS=1 npx vitest run --config vitest.live.config.mts` — optional live external API tests (full pipeline E2E included; may hit Gemini quota)
 - `npm run build` — production build
+
+## Screenshots
+
+Capture manually after a successful local run and place under `public/demo/` (for example Trace, evidence provenance, and report). Do not commit fabricated images.

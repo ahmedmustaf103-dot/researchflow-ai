@@ -3,6 +3,12 @@
 import { useState } from "react";
 import type { ResearchTrace } from "@/lib/research/trace-types";
 import type { TraceItemStatus } from "@/lib/research/trace-types";
+import {
+  isMcpSourceUrl,
+  sourcePrimaryLabel,
+  sourceToolLabel,
+  sourceToolTechnicalName,
+} from "@/lib/research/source-display";
 
 const STATUS_LABEL: Record<TraceItemStatus, string> = {
   success: "success",
@@ -11,6 +17,19 @@ const STATUS_LABEL: Record<TraceItemStatus, string> = {
   rejected: "rejected",
   pending: "pending",
 };
+
+const DEFAULT_OPEN = new Set(["plan", "extract", "report"]);
+
+function initialOpenStages(trace: ResearchTrace): Record<string, boolean> {
+  const open: Record<string, boolean> = {};
+  for (const stage of trace.stages) {
+    open[stage.id] =
+      DEFAULT_OPEN.has(stage.id) ||
+      stage.status === "pending" ||
+      stage.status === "failed";
+  }
+  return open;
+}
 
 function statusClass(status: TraceItemStatus): string {
   switch (status) {
@@ -46,12 +65,53 @@ function marker(status: TraceItemStatus): string {
   }
 }
 
+function ItemUrl({ url }: { url: string; title?: string }) {
+  if (isMcpSourceUrl(url)) {
+    return (
+      <p className="mt-1 break-all text-xs text-zinc-500">{url}</p>
+    );
+  }
+
+  return (
+    <p className="mt-1 break-all text-zinc-500">
+      {/^https?:\/\//i.test(url) ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sky-700 underline underline-offset-2 dark:text-sky-400"
+        >
+          {url}
+        </a>
+      ) : (
+        url
+      )}
+    </p>
+  );
+}
+
+function ToolDetail({ toolName }: { toolName: string | null | undefined }) {
+  const label = sourceToolLabel(toolName);
+  if (!label) {
+    return null;
+  }
+
+  const technical = sourceToolTechnicalName(toolName);
+
+  return (
+    <p className="mt-1 text-xs text-zinc-500">
+      Tool: {label}
+      {technical ? (
+        <span className="text-zinc-400"> ({technical})</span>
+      ) : null}
+    </p>
+  );
+}
+
 export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
-  const [openStages, setOpenStages] = useState<Record<string, boolean>>({
-    plan: true,
-    extract: true,
-    report: true,
-  });
+  const [openStages, setOpenStages] = useState<Record<string, boolean>>(() =>
+    initialOpenStages(trace),
+  );
 
   function toggle(stageId: string) {
     setOpenStages((current) => ({
@@ -65,8 +125,8 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
       <div className="space-y-1">
         <h2 className="text-lg font-medium">Research Trace</h2>
         <p className="text-sm text-zinc-500">
-          Derived from persisted project data. Events that were not stored (such
-          as rejected quotes or failed MCP lookups) are not invented here.
+          Provenance from persisted project data. Events that were never stored
+          (such as rejected quotes or failed MCP lookups) are not invented here.
         </p>
         {trace.errorMessage ? (
           <p className="text-sm text-red-600">Error: {trace.errorMessage}</p>
@@ -116,7 +176,15 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                           className="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800"
                         >
                           <div className="flex flex-wrap items-baseline gap-2">
-                            <span className="font-medium">{item.label}</span>
+                            <span className="font-medium">
+                              {item.url && isMcpSourceUrl(item.url)
+                                ? sourcePrimaryLabel({
+                                    title: item.label,
+                                    url: item.url,
+                                    toolName: item.toolName,
+                                  })
+                                : item.label}
+                            </span>
                             <span
                               className={`text-xs uppercase ${statusClass(item.status)}`}
                             >
@@ -134,21 +202,16 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                             </p>
                           ) : null}
                           {item.url ? (
-                            <p className="mt-1 break-all text-zinc-500">
-                              {item.url}
-                            </p>
+                            <ItemUrl url={item.url} title={item.label} />
                           ) : null}
-                          {item.toolName ? (
-                            <p className="mt-1 text-xs text-zinc-500">
-                              Tool: {item.toolName}
-                            </p>
-                          ) : null}
+                          <ToolDetail toolName={item.toolName} />
                         </li>
                       ))}
                     </ul>
                   )}
 
-                  {stage.id === "extract" && trace.provenance.findings.length > 0 ? (
+                  {stage.id === "extract" &&
+                  trace.provenance.findings.length > 0 ? (
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Evidence provenance</h3>
                       <ul className="space-y-2">
@@ -167,14 +230,19 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                             </p>
                             <p className="mt-1">
                               <span className="font-medium">Source:</span>{" "}
-                              {finding.sourceTitle}
+                              {isMcpSourceUrl(finding.sourceUrl)
+                                ? sourcePrimaryLabel({
+                                    title: finding.sourceTitle,
+                                    url: finding.sourceUrl,
+                                    toolName: finding.toolName,
+                                  })
+                                : finding.sourceTitle}
                             </p>
-                            <p className="mt-1 break-all text-zinc-500">
-                              {finding.sourceUrl}
-                            </p>
-                            <p className="mt-1 text-xs text-zinc-500">
-                              Tool: {finding.toolName ?? "unknown"}
-                            </p>
+                            <ItemUrl
+                              url={finding.sourceUrl}
+                              title={finding.sourceTitle}
+                            />
+                            <ToolDetail toolName={finding.toolName} />
                           </li>
                         ))}
                       </ul>
@@ -191,10 +259,15 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                             key={citation.sourceId}
                             className="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800"
                           >
-                            <p className="font-medium">{citation.title}</p>
-                            <p className="mt-1 break-all text-zinc-500">
-                              {citation.url}
+                            <p className="font-medium">
+                              {isMcpSourceUrl(citation.url)
+                                ? sourcePrimaryLabel({
+                                    title: citation.title,
+                                    url: citation.url,
+                                  })
+                                : citation.title}
                             </p>
+                            <ItemUrl url={citation.url} title={citation.title} />
                             <p className="mt-1 text-zinc-600 dark:text-zinc-400">
                               Cited in: {citation.citedIn.join(", ")}
                             </p>

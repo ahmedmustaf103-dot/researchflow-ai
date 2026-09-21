@@ -5,7 +5,14 @@ import type { ResearchProjectDetail } from "@/lib/research/types";
 import { isTerminalStatus } from "@/lib/research/status";
 import { buildResearchTrace } from "@/lib/research/trace";
 import type { ResearchTrace } from "@/lib/research/trace-types";
+import {
+  isMcpSourceUrl,
+  sourcePrimaryLabel,
+  sourceToolLabel,
+  sourceToolTechnicalName,
+} from "@/lib/research/source-display";
 import { ResearchTraceView } from "@/components/research/research-trace";
+import { ReportMarkdown } from "@/components/research/report-markdown";
 
 type DetailPayload = ResearchProjectDetail & {
   trace?: ResearchTrace;
@@ -105,15 +112,30 @@ export function ResearchProjectView({
           <p className="text-sm text-zinc-500">No sources yet.</p>
         ) : (
           <ul className="space-y-2 text-sm">
-            {detail.sources.map((source) => (
-              <li key={source.id}>
-                <div className="font-medium">{source.title}</div>
-                <div className="text-zinc-500">{source.url}</div>
-                {source.toolName ? (
-                  <div className="text-xs text-zinc-500">Tool: {source.toolName}</div>
-                ) : null}
-              </li>
-            ))}
+            {detail.sources.map((source) => {
+              const toolLabel = sourceToolLabel(source.toolName);
+              const technical = sourceToolTechnicalName(source.toolName);
+              return (
+                <li key={source.id}>
+                  <div className="font-medium">{sourcePrimaryLabel(source)}</div>
+                  {isMcpSourceUrl(source.url) ? (
+                    <div className="break-all text-xs text-zinc-500">
+                      {source.url}
+                    </div>
+                  ) : (
+                    <div className="break-all text-zinc-500">{source.url}</div>
+                  )}
+                  {toolLabel ? (
+                    <div className="text-xs text-zinc-500">
+                      Tool: {toolLabel}
+                      {technical ? (
+                        <span className="text-zinc-400"> ({technical})</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -143,9 +165,9 @@ export function ResearchProjectView({
       <section>
         <h2 className="mb-3 text-lg font-medium">Report</h2>
         {detail.report ? (
-          <pre className="whitespace-pre-wrap rounded border border-zinc-200 p-4 text-sm dark:border-zinc-800">
-            {detail.report.markdown}
-          </pre>
+          <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
+            <ReportMarkdown markdown={detail.report.markdown} />
+          </div>
         ) : (
           <p className="text-sm text-zinc-500">
             Report will appear when the pipeline finishes.

@@ -49,9 +49,16 @@ export function QuestionForm() {
         rows={4}
         value={question}
         onChange={(event) => setQuestion(event.target.value)}
-        placeholder="What are the top competitors of Stripe?"
+        placeholder="What are the top competitors of Stripe? Compare pricing, target market, features, strengths and weaknesses."
         className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
       />
+      <p className="text-xs leading-5 text-zinc-500">
+        Try:{" "}
+        <span className="text-zinc-600 dark:text-zinc-400">
+          What are the top competitors of Stripe? Compare pricing, target
+          market, features, strengths and weaknesses.
+        </span>
+      </p>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <button
         type="submit"
