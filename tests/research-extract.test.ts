@@ -11,6 +11,7 @@ import {
   extractEvidenceFromSource,
   extractEvidenceFromSources,
   isSourceEligibleForExtraction,
+  claimStaysWithinQuote,
   quoteExistsInSource,
   selectVerifiedFindings,
   toCreateFindingInput,
@@ -120,6 +121,27 @@ describe("extraction schema", () => {
 describe("quote verification", () => {
   it("accepts an exact quote", () => {
     expect(quoteExistsInSource(finding().quote, sourceContent)).toBe(true);
+  });
+
+  it("rejects a price or yield that the quote does not state", () => {
+    const quote = "Marina Gate is a residential development in Dubai Marina";
+    const content = `${quote} with a pool and gym.`;
+    expect(claimStaysWithinQuote("Marina Gate is priced from AED 2000000.", quote)).toBe(
+      false,
+    );
+    expect(
+      selectVerifiedFindings(
+        [
+          {
+            claim: "Marina Gate offers an 8% yield.",
+            quote,
+            relevance: "return",
+          },
+        ],
+        content,
+        "src_1",
+      ),
+    ).toEqual([]);
   });
 
   it("accepts a whitespace-normalized quote", () => {

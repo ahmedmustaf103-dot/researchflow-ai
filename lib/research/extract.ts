@@ -98,6 +98,37 @@ function findingKey(finding: ExtractedEvidenceFinding): string {
   return `${normalizeForQuoteMatch(finding.claim).toLowerCase()}|${normalizeForQuoteMatch(finding.quote).toLowerCase()}`;
 }
 
+const UNGROUNDED_FIGURE =
+  /(?:[$£€]|AED|USD|GBP|EUR)\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s?%|\b20\d{2}\b|\b\d{2,}\b/gi;
+
+const UNGROUNDED_ADVICE =
+  /\b(yields?|valuations?|investment advice|recommend buying|buy recommendation)\b/i;
+
+function normalized(value: string): string {
+  return value.replace(/\s+/g, " ").toLowerCase();
+}
+
+/**
+ * A claim may restate its quote. It may not introduce a price, yield, year,
+ * or advice phrase that the quote itself does not contain.
+ */
+export function claimStaysWithinQuote(claim: string, quote: string): boolean {
+  const quoted = normalized(quote);
+  const figures = claim.match(UNGROUNDED_FIGURE) ?? [];
+  for (const figure of figures) {
+    if (!quoted.includes(normalized(figure))) {
+      return false;
+    }
+  }
+
+  const advice = claim.match(UNGROUNDED_ADVICE);
+  if (advice && !quoted.includes(normalized(advice[0]))) {
+    return false;
+  }
+
+  return true;
+}
+
 export function selectVerifiedFindings(
   findings: ExtractedEvidenceFinding[],
   content: string,
@@ -110,6 +141,13 @@ export function selectVerifiedFindings(
     if (!quoteExistsInSource(finding.quote, content)) {
       console.error(
         `[research extract] rejected unsupported quote source=${sourceId}`,
+      );
+      continue;
+    }
+
+    if (!claimStaysWithinQuote(finding.claim, finding.quote)) {
+      console.error(
+        `[research extract] rejected ungrounded claim source=${sourceId}`,
       );
       continue;
     }

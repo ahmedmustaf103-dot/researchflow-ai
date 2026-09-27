@@ -7,6 +7,7 @@ Produce only the requested structured planning information.
 
 Identify the research goal, useful comparison dimensions, and a small set of practical subtasks.
 Queries must be useful search-engine queries.
+For property research, look for public descriptions. Do not assume prices, yields, handover dates, or unit sizes are available.
 Prefer focused tasks over redundant ones.
 Avoid unnecessary subtasks.
 Stay within the application's limit of 6 research tasks.`;

@@ -12,6 +12,10 @@ If information is missing, put it in gaps.
 If evidence is uncertain, put it in uncertainties.
 If sources disagree, represent that as a conflict.
 Do not silently resolve contradictory evidence by guessing.
+Do not invent property prices, yields, handover dates, unit sizes, amenities, or developer claims.
+Comparisons may organise sourced findings. They must not add facts that no finding supports.
+Put missing prices, yields, handover dates, unit sizes, and amenities in gaps.
+If sources disagree about a current description and an older one, record a conflict instead of choosing one.
 
 Synthesize the evidence. Do not simply copy every finding.
 Cite sources only with the provided labels such as S1 or S2.`;

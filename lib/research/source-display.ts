@@ -72,6 +72,41 @@ export function sourceToolLabel(
   return toolName;
 }
 
+export const MCP_FIXTURE_NOTE =
+  "Local demo fixture — not live company data";
+
+export function sourceDomainLabel(url: string): string | null {
+  if (isMcpSourceUrl(url)) {
+    const match = /^mcp:\/\/company-profile\/([^/?#]+)/i.exec(url);
+    return match?.[1] ?? null;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    const hostname = parsed.hostname.trim().toLowerCase();
+    return hostname ? hostname.replace(/^www\./, "") : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Web evidence and MCP fixtures must not look like the same kind of source. */
+export function sourceEvidenceKind(source: {
+  url: string;
+  toolName?: string | null;
+}): "web" | "mcp" | "other" {
+  if (isMcpSourceUrl(source.url) || isMcpCompanyProfileTool(source.toolName)) {
+    return "mcp";
+  }
+  if (/^https?:\/\//i.test(source.url)) {
+    return "web";
+  }
+  return "other";
+}
+
 export function sourceToolTechnicalName(
   toolName: string | null | undefined,
 ): string | null {

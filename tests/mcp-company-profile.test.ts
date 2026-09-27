@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   COMPANY_RESEARCH_SERVER_ID,
   LOOKUP_COMPANY_PROFILE_TOOL,
+  MCP_COMPANY_PROFILE_TOOL_NAME,
   companyProfileSchema,
+  companyProfileSourceUrl,
   createCompanyResearchServerConfig,
   createInProcessMcpClient,
   createStdioMcpClient,
@@ -40,6 +42,61 @@ describe("company profile MCP server (fixture lookup)", () => {
       expect(unknown.code).toBe("not_found");
       expect(unknown.error).toMatch(/Unknown company domain/);
     }
+  });
+
+  it("returns PayPal on the existing schema", () => {
+    const result = lookupCompanyProfile({ domain: "paypal.com" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const profile = companyProfileSchema.parse(result.profile);
+    expect(profile.name).toBe("PayPal");
+    expect(profile.domain).toBe("paypal.com");
+  });
+
+  it("returns local demo profiles for real-estate developer domains", () => {
+    const expected = [
+      ["emaar.com", "Emaar Properties"],
+      ["damacproperties.com", "DAMAC Properties"],
+      ["select-group.ae", "Select Group"],
+    ] as const;
+
+    for (const [domain, name] of expected) {
+      const result = lookupCompanyProfile({ domain: `www.${domain}` });
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        continue;
+      }
+
+      const profile = companyProfileSchema.parse(result.profile);
+      expect(profile.domain).toBe(domain);
+      expect(profile.name).toBe(name);
+      expect(profile.products.length).toBeGreaterThan(0);
+      expect(profile.summary).toMatch(/local demo fixture/i);
+      expect(profile.summary).toMatch(/not a live company or property database/i);
+      expect(profile.summary).not.toMatch(/verified current|live company profile/i);
+      expect(profile.pricingNotes.join(" ")).toMatch(/not included in this demo fixture/i);
+      expect(profile.pricingNotes.join(" ")).not.toMatch(/\d/);
+
+      const content = formatCompanyProfileContent(profile);
+      expect(content).toContain(
+        "deterministic local fixture provider for portfolio/demo use",
+      );
+      expect(content).toContain("not a live company-data API response");
+    }
+  });
+
+  it("keeps the company-profile tool name and mcp source url", () => {
+    expect(LOOKUP_COMPANY_PROFILE_TOOL).toBe("lookup_company_profile");
+    expect(MCP_COMPANY_PROFILE_TOOL_NAME).toBe("mcp:lookup_company_profile");
+    expect(companyProfileSourceUrl("emaar.com")).toBe(
+      "mcp://company-profile/emaar.com",
+    );
+    expect(companyProfileSourceUrl("select-group.ae")).toBe(
+      "mcp://company-profile/select-group.ae",
+    );
   });
 
   it("rejects invalid input", () => {

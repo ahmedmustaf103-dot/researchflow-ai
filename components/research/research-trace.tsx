@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { ResearchTrace } from "@/lib/research/trace-types";
-import type { TraceItemStatus } from "@/lib/research/trace-types";
+import type { ResearchStage } from "@/lib/research/types";
+import type { ResearchTrace, TraceItemStatus } from "@/lib/research/trace-types";
+import { EvidenceBlock } from "@/components/research/evidence-block";
 import {
   isMcpSourceUrl,
   sourcePrimaryLabel,
@@ -16,6 +17,17 @@ const STATUS_LABEL: Record<TraceItemStatus, string> = {
   skipped: "skipped",
   rejected: "rejected",
   pending: "pending",
+};
+
+const STAGE_MEANING: Record<ResearchStage, string> = {
+  plan: "Break the question into research tasks.",
+  search: "Find relevant public sources.",
+  retrieve: "Fetch source content.",
+  enrich: "Add available company-profile context.",
+  extract: "Identify evidence-backed findings.",
+  verify: "Check extracted quotes against retrieved content.",
+  analyse: "Compare and organise the evidence.",
+  report: "Produce the citation-backed brief.",
 };
 
 const DEFAULT_OPEN = new Set(["plan", "extract", "report"]);
@@ -159,6 +171,9 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                     </span>
                   </span>
                   <span className="mt-0.5 block text-sm text-zinc-600 dark:text-zinc-400">
+                    {STAGE_MEANING[stage.id]}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-zinc-500">
                     {stage.summary}
                   </span>
                 </span>
@@ -176,35 +191,44 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                           className="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800"
                         >
                           <div className="flex flex-wrap items-baseline gap-2">
-                            <span className="font-medium">
-                              {item.url && isMcpSourceUrl(item.url)
-                                ? sourcePrimaryLabel({
-                                    title: item.label,
-                                    url: item.url,
-                                    toolName: item.toolName,
-                                  })
-                                : item.label}
-                            </span>
+                            {item.quote ? null : (
+                              <span className="font-medium">
+                                {item.url && isMcpSourceUrl(item.url)
+                                  ? sourcePrimaryLabel({
+                                      title: item.label,
+                                      url: item.url,
+                                      toolName: item.toolName,
+                                    })
+                                  : item.label}
+                              </span>
+                            )}
                             <span
                               className={`text-xs uppercase ${statusClass(item.status)}`}
                             >
                               {STATUS_LABEL[item.status]}
                             </span>
                           </div>
-                          {item.detail ? (
+                          {item.quote ? (
+                            <div className="mt-2">
+                              <EvidenceBlock
+                                claim={item.label}
+                                quote={item.quote}
+                                detail={item.detail}
+                                sourceUrl={item.url}
+                                toolName={item.toolName}
+                              />
+                            </div>
+                          ) : item.detail ? (
                             <p className="mt-1 text-zinc-600 dark:text-zinc-400">
                               {item.detail}
                             </p>
                           ) : null}
-                          {item.quote ? (
-                            <p className="mt-2 text-zinc-500">
-                              Quote: “{item.quote}”
-                            </p>
-                          ) : null}
-                          {item.url ? (
+                          {item.url && !item.quote ? (
                             <ItemUrl url={item.url} title={item.label} />
                           ) : null}
-                          <ToolDetail toolName={item.toolName} />
+                          {item.quote ? null : (
+                            <ToolDetail toolName={item.toolName} />
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -220,29 +244,13 @@ export function ResearchTraceView({ trace }: { trace: ResearchTrace }) {
                             key={finding.findingId}
                             className="rounded border border-zinc-200 p-3 text-sm dark:border-zinc-800"
                           >
-                            <p>
-                              <span className="font-medium">Claim:</span>{" "}
-                              {finding.claim}
-                            </p>
-                            <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-                              <span className="font-medium">Quote:</span> “
-                              {finding.quote}”
-                            </p>
-                            <p className="mt-1">
-                              <span className="font-medium">Source:</span>{" "}
-                              {isMcpSourceUrl(finding.sourceUrl)
-                                ? sourcePrimaryLabel({
-                                    title: finding.sourceTitle,
-                                    url: finding.sourceUrl,
-                                    toolName: finding.toolName,
-                                  })
-                                : finding.sourceTitle}
-                            </p>
-                            <ItemUrl
-                              url={finding.sourceUrl}
-                              title={finding.sourceTitle}
+                            <EvidenceBlock
+                              claim={finding.claim}
+                              quote={finding.quote}
+                              sourceTitle={finding.sourceTitle}
+                              sourceUrl={finding.sourceUrl}
+                              toolName={finding.toolName}
                             />
-                            <ToolDetail toolName={finding.toolName} />
                           </li>
                         ))}
                       </ul>

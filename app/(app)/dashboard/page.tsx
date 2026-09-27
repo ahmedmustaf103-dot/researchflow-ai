@@ -12,20 +12,30 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto w-full max-w-3xl space-y-10 px-6 py-8">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-1 text-zinc-600 dark:text-zinc-400">
-          Ask a business or market research question. Planning, extraction,
-          analysis, and reports use Gemini. Search and retrieval use Brave
-          Search and Jina.
+        <h1 className="text-2xl font-semibold">Evidence-backed property research</h1>
+        <p className="mt-2 text-zinc-800 dark:text-zinc-100">
+          Turn a property research question into a sourced, evidence-backed
+          brief.
+        </p>
+        <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          For estate agents, property analysts, developers, and research teams.
+          Compare developments, research developers, and review areas from
+          public evidence, with gaps and conflicts kept visible.
         </p>
       </div>
 
       <QuestionForm />
 
       <section>
-        <h2 className="mb-3 text-lg font-medium">Projects</h2>
+        <h2 className="mb-3 text-lg font-medium">Briefs</h2>
         {projects.length === 0 ? (
-          <p className="text-sm text-zinc-500">No research projects yet.</p>
+          <div className="space-y-1 text-sm text-zinc-500">
+            <p>No research briefs yet.</p>
+            <p>
+              Choose a workflow above to create your first evidence-backed
+              brief.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-2">
             {projects.map((project) => (

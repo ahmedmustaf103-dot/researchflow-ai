@@ -60,6 +60,10 @@ export const researchReportSchema = z.object({
 
 export type ResearchReport = z.infer<typeof researchReportSchema>;
 
+/** Application-controlled text. Not a model field and not cited. */
+export const REPORT_DISCLAIMER =
+  "Research intelligence grounded in retrieved sources. This is not investment, valuation, or transaction advice.";
+
 function clampText(value: string, max = MAX_REPORT_TEXT_LENGTH): string {
   return value.slice(0, max);
 }
@@ -202,6 +206,8 @@ export function renderCitationBackedReport(input: {
 
   const markdown = [
     `# ${input.report.title}`,
+    ``,
+    REPORT_DISCLAIMER,
     ``,
     `**Question:** ${input.question}`,
     ``,

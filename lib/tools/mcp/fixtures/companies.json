@@ -88,5 +88,92 @@
         "url": "https://www.paypal.com/"
       }
     ]
+  },
+  "emaar.com": {
+    "domain": "emaar.com",
+    "name": "Emaar Properties",
+    "summary": "Emaar Properties is a Dubai property developer associated with master-planned residential communities, including developments in Dubai Marina and Downtown Dubai. This record is a local demo fixture for research walkthroughs, not a live company or property database.",
+    "products": [
+      "Master-planned residential communities",
+      "Apartments and villas",
+      "Dubai Marina and Downtown Dubai developments"
+    ],
+    "targetCustomers": [
+      "Home buyers",
+      "Residents comparing Dubai communities"
+    ],
+    "pricingNotes": [
+      "Current unit prices are not included in this demo fixture",
+      "Published prices vary by development and must come from retrieved web pages",
+      "Yields, valuations, and transaction statistics are not included in this demo fixture"
+    ],
+    "strengths": [
+      "Broad public portfolio of named Dubai communities",
+      "Developments that commonly appear in Dubai residential research"
+    ],
+    "sources": [
+      {
+        "title": "Emaar Properties fixture overview",
+        "url": "https://www.emaar.com/"
+      }
+    ]
+  },
+  "damacproperties.com": {
+    "domain": "damacproperties.com",
+    "name": "DAMAC Properties",
+    "summary": "DAMAC Properties is a Dubai property developer known for residential towers and branded residences. This record is a local demo fixture for research walkthroughs, not a live company or property database.",
+    "products": [
+      "Residential towers",
+      "Branded residences",
+      "Waterfront residential developments"
+    ],
+    "targetCustomers": [
+      "Home buyers",
+      "Buyers comparing Dubai residential developments"
+    ],
+    "pricingNotes": [
+      "Current unit prices are not included in this demo fixture",
+      "Published prices vary by development and must come from retrieved web pages",
+      "Yields, valuations, and transaction statistics are not included in this demo fixture"
+    ],
+    "strengths": [
+      "Public branded-residence positioning",
+      "Developments that commonly appear beside other Dubai residential competitors"
+    ],
+    "sources": [
+      {
+        "title": "DAMAC Properties fixture overview",
+        "url": "https://www.damacproperties.com/"
+      }
+    ]
+  },
+  "select-group.ae": {
+    "domain": "select-group.ae",
+    "name": "Select Group",
+    "summary": "Select Group is a Dubai property developer publicly associated with Marina Gate and other residential projects in Dubai Marina. This record is a local demo fixture for research walkthroughs, not a live company or property database.",
+    "products": [
+      "Marina Gate",
+      "Residential towers in Dubai Marina",
+      "Other named residential developments"
+    ],
+    "targetCustomers": [
+      "Home buyers researching Dubai Marina",
+      "Buyers comparing nearby residential towers"
+    ],
+    "pricingNotes": [
+      "Current unit prices are not included in this demo fixture",
+      "Published prices vary by development and must come from retrieved web pages",
+      "Yields, valuations, and transaction statistics are not included in this demo fixture"
+    ],
+    "strengths": [
+      "Public association with Marina Gate in Dubai Marina",
+      "Project descriptions that can be compared with neighbouring developments"
+    ],
+    "sources": [
+      {
+        "title": "Select Group fixture overview",
+        "url": "https://www.select-group.ae/"
+      }
+    ]
   }
 }

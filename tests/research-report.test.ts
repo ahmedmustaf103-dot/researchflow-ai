@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createMockLLMProvider } from "@/lib/ai/mock";
+import { REPORT_SYSTEM_PROMPT } from "@/lib/ai/prompts/report";
 import type { GenerateObjectInput, LLMProvider } from "@/lib/ai/provider";
 import { sanitizeSourceIds } from "@/lib/research/citations";
 import { createMemoryResearchStore } from "@/lib/research/memory-store";
 import {
   clampResearchReport,
   generateCitationBackedReport,
+  REPORT_DISCLAIMER,
   renderCitationBackedReport,
   researchReportSchema,
   sanitizeReportCitations,
@@ -240,6 +242,75 @@ describe("citation-backed reports", () => {
 
   it("validates the report schema shape", () => {
     expect(researchReportSchema.parse(report()).keyFindings).toHaveLength(1);
+    expect(Object.keys(researchReportSchema.shape)).toEqual([
+      "title",
+      "executiveSummary",
+      "scope",
+      "keyFindings",
+      "comparisons",
+      "strengthsWeaknesses",
+      "gaps",
+      "uncertainties",
+      "conflicts",
+    ]);
+  });
+
+  it("renders the application disclaimer without adding report sections", () => {
+    const generated = renderCitationBackedReport({
+      question: "Research the top competitors of Stripe",
+      report: report(),
+      sources: [projectSource],
+    });
+
+    expect(generated.markdown).toContain(REPORT_DISCLAIMER);
+    expect(generated.markdown).toContain(
+      "Research intelligence grounded in retrieved sources. This is not investment, valuation, or transaction advice.",
+    );
+    expect(generated.markdown.indexOf(REPORT_DISCLAIMER)).toBeLessThan(
+      generated.markdown.indexOf("**Question:**"),
+    );
+    for (const section of [
+      "## Executive summary",
+      "## Scope",
+      "## Key findings",
+      "## Comparisons",
+      "## Strengths and weaknesses",
+      "## Gaps",
+      "## Uncertainties",
+      "## Conflicts",
+      "## Sources",
+    ]) {
+      expect(generated.markdown).toContain(section);
+    }
+    expect(generated.outline.sections).toEqual([
+      "Executive summary",
+      "Scope",
+      "Key findings",
+      "Comparisons",
+      "Strengths and weaknesses",
+      "Gaps",
+      "Uncertainties",
+      "Conflicts",
+      "Sources",
+    ]);
+    expect(generated.markdown).not.toMatch(
+      /Investment Recommendation|Deal Score|Property Score|Financial Forecast|Market Prediction|\bROI\b|Buy\/Sell/i,
+    );
+  });
+
+  it("tells the report prompt to park missing prices in gaps and avoid advice", () => {
+    expect(REPORT_SYSTEM_PROMPT).toContain(
+      "Put missing prices and specifications in gaps.",
+    );
+    expect(REPORT_SYSTEM_PROMPT).toContain(
+      "Keep sourced observations separate from missing information.",
+    );
+    expect(REPORT_SYSTEM_PROMPT).toContain(
+      "Do not present the report as investment advice, a valuation, financial advice, or transaction advice.",
+    );
+    expect(REPORT_SYSTEM_PROMPT).toContain(
+      "Cite evidence only with the provided source labels such as S1 or S2.",
+    );
   });
 
   it("clamps oversized report lists after generation", () => {

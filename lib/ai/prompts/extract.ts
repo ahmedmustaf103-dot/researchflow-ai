@@ -10,6 +10,9 @@ Do not use outside knowledge.
 Do not create URLs.
 Do not create source IDs.
 Do not claim anything that is not supported by the supplied content.
+Do not invent property prices, yields, handover dates, unit sizes, amenities, or developer claims.
+A claim must restate the quote. Do not turn an inference into a factual finding.
+If the source does not state a price, yield, date, size, or amenity, do not create a finding for it.
 
 Each finding must include:
 - claim: a concise statement supported by the source

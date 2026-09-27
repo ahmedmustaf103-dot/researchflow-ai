@@ -1,6 +1,10 @@
 # ResearchFlow AI
 
-Evidence-backed business and market research, built as a **deterministic pipeline** rather than an uncontrolled agent loop.
+Evidence-backed property research, built as a **deterministic pipeline** rather than an uncontrolled agent loop.
+
+**Product.** ResearchFlow helps estate agents, property analysts, developers, and research teams turn a property question into a sourced brief. They can compare developments, research developers, and review areas. The brief keeps public evidence, gaps, and conflicting sources visible, with a Research Trace back to each finding.
+
+**Engineering.** Under that workflow, the same engine demonstrates structured Gemini outputs, deterministic orchestration, dependency injection, Brave Search, Jina retrieval, MCP company-profile enrichment, quote verification, citation validation, offline evaluations, bounded retry/backoff, a provenance Trace, and Prisma persistence. The engine can support other research domains. It is not a chatbot, a property database, a valuation tool, or an investment advisor.
 
 ```text
 Question
@@ -14,9 +18,9 @@ Question
 → Report
 ```
 
-This is a public portfolio project. It is not a fully autonomous research agent.
+This is a public portfolio project. The full external live run is still pending.
 
-**What it includes today:** Gemini structured planning, extraction, analysis, and reporting; Brave Search; Jina page retrieval; MCP company-profile enrichment over real stdio; quote verification; citation validation against persisted Sources; a Research Trace for provenance; a fixture-based evaluation/reliability suite; and bounded Gemini retries with short backoff on HTTP 429.
+**What it includes today:** real-estate research templates (Competitor, Property, Area, Developer, Market); Gemini structured planning, extraction, analysis, and reporting; Brave Search; Jina page retrieval; MCP company-profile enrichment over real stdio; quote verification; citation validation against persisted Sources; a Research Trace for provenance; a fixture-based evaluation/reliability suite; and bounded Gemini retries with short backoff on HTTP 429.
 
 ## Why I built it
 
@@ -33,17 +37,27 @@ The architecture emphasises practical AI engineering:
 - deterministic evaluations for quality and reliability
 - RAG as a planned extension, not an unfinished claim
 
+The same codebase is ordinary software engineering: Next.js, TypeScript, Prisma/PostgreSQL, Auth.js, injected tools, tests, and explicit failure handling.
+
+The first product workflow is a sourced real-estate brief: competitor and development research, missing prices and specifications recorded as gaps, and an explainable Research Trace.
+
 ## Demo
 
-Example question:
+Intended demonstration question:
 
-> What are the top competitors of Stripe? Compare pricing, target market, features, strengths and weaknesses.
+> What are the top residential developments competing with Dubai Marina? Compare developer, price positioning, amenities, target market and differentiators. Record missing prices or specifications as gaps.
 
-That path exercises:
+That question is the portfolio demo workflow. It has **not** been claimed as a successful live run through Gemini.
+
+The path a run is built to show:
 
 **Question → Plan → Search → Retrieve → MCP Enrichment → Extract → Verify → Analyse → Report**
 
-When Brave returns fixture domains such as `stripe.com`, `adyen.com`, or `paypal.com`, MCP enrichment can attach structured company-profile Sources (`mcp://…`) alongside normal HTTP(S) Sources.
+Web evidence comes from Brave and Jina as normal HTTP(S) pages. MCP enrichment attaches a local demo company profile only when a retrieved hostname matches a fixture domain. Those profiles are not live company data.
+
+## Real-estate demo
+
+Competitor comparison is the primary demo. Property, developer, area, and market workflows use the same pipeline. MCP developer profiles are local fixture data. Reports are grounded in retrieved sources. The product is research support, not valuation or investment advice.
 
 ## Architecture
 
@@ -110,12 +124,30 @@ lib/rag/        placeholder
 
 ## MCP
 
-- **Server:** local `company-research` MCP server over stdio (`@modelcontextprotocol/sdk`)
-- **Tool:** `lookup_company_profile` with `{ domain: string }`
-- **Provider:** deterministic local fixtures (`stripe.com`, `adyen.com`, `paypal.com`)
-- **Client:** application wrapper; Zod-validated responses
-- **Persistence:** successful lookups become Sources with `url = mcp://company-profile/{domain}` and `toolName = mcp:lookup_company_profile`
-- **Safety:** `mcp://` URLs are never sent through Jina
+**Web sources**
+
+- Brave Search and Jina Reader
+- HTTP/HTTPS pages
+- Externally retrieved evidence, stored as ordinary sources
+
+**MCP demo profiles**
+
+- Local deterministic fixtures, read by `lookup_company_profile({ domain })`
+- Persisted as `mcp://company-profile/{domain}` with `toolName = mcp:lookup_company_profile`
+- Not live company APIs
+- Not a property database
+- Not live market data
+
+Fixture domains in `lib/tools/mcp/fixtures/companies.json`:
+
+- `stripe.com`
+- `adyen.com`
+- `paypal.com`
+- `emaar.com`
+- `damacproperties.com`
+- `select-group.ae`
+
+`stripe.com`, `adyen.com`, and `paypal.com` are the original payment-company fixtures. `emaar.com`, `damacproperties.com`, and `select-group.ae` are local real-estate demo profiles for the portfolio workflow. A profile is attached only when retrieval already returned that hostname. Unknown domains return not found and do not fail the project. `mcp://` URLs are never sent through Jina.
 
 ## Evaluations + reliability
 
@@ -142,9 +174,9 @@ It does **not** invent events that were never stored (for example rejected-quote
 | TypeScript (`npm run typecheck`) | **PASS** |
 | ESLint (`npm run lint`) | **PASS** |
 | Production build (`npm run build`) | **PASS** |
-| Full live Prisma + Gemini + Brave + Jina + MCP E2E | **PENDING** |
+| Full live Prisma + Gemini + Brave + Jina + MCP E2E | **PENDING** — blocked by Gemini HTTP 429 |
 
-**External live verification is not claimed as passed.** Two live full-pipeline runs reached real Brave/MCP/Gemini stages and then stopped on Gemini **HTTP 429** quota/rate-limit responses. That is an external API limit, not treated here as a successful E2E result.
+**External live verification is not claimed as passed.** Two live full-pipeline runs reached real Brave/MCP/Gemini stages and then stopped on Gemini **HTTP 429** quota/rate-limit responses. That is an external API limit, not treated here as a successful E2E result. The real-estate demo question has not been claimed as a completed live run.
 
 Optional live suite (requires keys; may hit quota):
 
@@ -156,10 +188,13 @@ Includes focused live tests plus `tests/live/pipeline-e2e.test.ts` (full product
 
 ## Limitations
 
-- MCP company profiles are **fixture-backed demo data**, not live company-data APIs.
+- MCP company profiles are local fixture/demo data. They are not live company-data APIs, a property database, or live market data.
+- Property prices and specifications appear only when a retrieved source supports them. Missing prices and specifications are recorded as gaps.
+- Search and retrieval stay inside the current caps: 6 research tasks, 5 results per task, 12 retrieved pages, and 3 company-profile lookups.
+- The product is research support. It does not provide valuations, investment advice, or transaction advice.
+- Full live Prisma + Gemini + Brave + Jina + MCP E2E remains pending because previous live attempts returned Gemini HTTP 429.
 - Google sign-in needs `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` for local auth testing.
-- Full live E2E remains **pending** because of external Gemini quota/rate limiting (HTTP 429).
-- Research Trace reconstructs provenance from persisted application data; it is **not** a complete event log.
+- Research Trace reconstructs provenance from persisted application data; it is not a complete event log.
 
 ## Tech stack
 
@@ -203,4 +238,4 @@ Google sign-in needs `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`. Gemini needs `GE
 
 ## Screenshots
 
-Capture manually after a successful local run and place under `public/demo/` (for example Trace, evidence provenance, and report). Do not commit fabricated images.
+Demo screenshots can be captured from the local application. This repository does not include product screenshots.
